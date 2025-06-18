@@ -28,12 +28,32 @@ The extension will activate on any supported Trados Cloud environment (including
 
 ```
 
-📁 tradosClarity/
+ߓ tradosClarity/
 ├── manifest.json         # Chrome Extension config (Manifest V3)
 ├── content.js            # Accessibility logic and DOM enhancements
 └── accessibility.css     # Style overrides for accessibility support
 
 ```
+## File Summary
+
+| File               | Purpose |
+|--------------------|---------|
+| `manifest.json`    | Defines extension behaviour, matches, permissions, and scripts :contentReference[oaicite:0]{index=0} |
+| `content.js`       | Main logic: scans for popovers, adds ARIA enhancements, enables keyboard navigation :contentReference[oaicite:1]{index=1} |
+| `accessibility.css`| CSS overrides to improve visibility, contrast, and focus management :contentReference[oaicite:2]{index=2} |
+
+## Keyboard Shortcuts
+
+- `Escape` – Closes an active tour step.
+- `Arrow Left / Up` – Moves to the previous step.
+- `Arrow Right / Down` – Advances to the next step.
+- `Alt+A` – Focuses the most relevant action button (e.g., Accept, Complete).
+- `Alt+Shift+A` – Alternative shortcut for action focus.
+
+## Browser Support
+
+- Optimised for Google Chrome (Manifest V3).
+- May also work in Chromium-based browsers like Edge and Brave (not officially tested).
 
 ## Contributing
 
