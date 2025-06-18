@@ -1,0 +1,100 @@
+/* tradosClarity Accessibility Enhancements for Tour Popovers */
+
+/* Ensure tour popovers are properly focused */
+[data-testid="help-tour-popover"][data-trados-enhanced="true"] {
+  outline: 2px solid #0066cc !important;
+  outline-offset: 2px !important;
+}
+
+/* Hide outline when not keyboard focused */
+[data-testid="help-tour-popover"][data-trados-enhanced="true"]:not(:focus-visible) {
+  outline: none !important;
+}
+
+/* Improve button focus indicators in tour popovers */
+[data-testid="help-tour-popover"] button:focus,
+[data-testid="help-tour-popover"] a[role="button"]:focus,
+[data-testid="help-tour-popover"] [role="button"]:focus {
+  outline: 2px solid #0066cc !important;
+  outline-offset: 2px !important;
+  background-color: rgba(0, 102, 204, 0.1) !important;
+}
+
+/* Ensure sufficient color contrast for tour popover text */
+[data-testid="help-tour-popover"] {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+/* Dark backgrounds need light text */
+[data-testid="help-tour-popover"].dark-theme,
+[data-testid="help-tour-popover"][style*="background-color: rgb(0"],
+[data-testid="help-tour-popover"][style*="background-color: #0"],
+[data-testid="help-tour-popover"][style*="background: rgb(0"],
+[data-testid="help-tour-popover"][style*="background: #0"] {
+  color: #ffffff !important;
+  background-color: #333333 !important;
+}
+
+/* Ensure buttons have sufficient contrast in tour popovers */
+[data-testid="help-tour-popover"] button {
+  border: 1px solid #666666 !important;
+  padding: 8px 16px !important;
+  min-height: 44px !important; /* Touch target size */
+  min-width: 44px !important;
+}
+
+/* Screen reader only content */
+.trados-live-region,
+.trados-step-counter {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(1px, 1px, 1px, 1px) !important;
+  white-space: nowrap !important;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  [data-testid="help-tour-popover"] {
+    border: 2px solid ButtonText !important;
+    background: ButtonFace !important;
+    color: ButtonText !important;
+  }
+  
+  [data-testid="help-tour-popover"] button {
+    border: 2px solid ButtonText !important;
+    background: ButtonFace !important;
+    color: ButtonText !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  [data-testid="help-tour-popover"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Ensure tour content is readable at all zoom levels */
+[data-testid="help-tour-popover"] {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+}
+
+/* Improve spacing for better readability */
+[data-testid="help-tour-popover"] * {
+  margin: 4px 0 !important;
+}
+
+[data-testid="help-tour-popover"] button {
+  margin: 8px 4px !important;
+}
+
+/* Ensure proper focus management */
+[data-testid="help-tour-popover"]:focus {
+  z-index: 10000 !important;
+}

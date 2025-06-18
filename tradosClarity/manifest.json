@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "tradosClarity",
+  "version": "1.0.0",
+  "description": "Enhances accessibility of the various incarnations of Trados Cloud for screen readers",
+  
+  "permissions": [
+    "activeTab"
+  ],
+  
+  "host_permissions": [
+    "*://*.trados.com/*",
+    "*://trados.com/*",
+    "*://localhost:*/*"
+  ],
+  
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.trados.com/*",
+        "*://trados.com/*", 
+        "*://localhost:*/*"
+      ],
+      "js": ["content.js"],
+      "css": ["accessibility.css"],
+      "run_at": "document_end"
+    }
+  ]
+}
