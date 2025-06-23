@@ -1,6 +1,11 @@
-# tradosClarity Help Documentation
+<table border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td><img src="../tradosClarity/icons/icon128.png" alt="tradosClarity" width="80"></td>
+<td><h1>tradosClarity Help Documentation</h1></td>
+</tr>
+</table>
 
-Welcome to tradosClarity - your accessibility companion for Trados Cloud! This extension makes Trados Cloud more accessible for screen reader users and anyone who relies on keyboard navigation.
+Welcome to tradosClarity - your accessibility companion for Trados Cloud! This extension, built as part of an open source project, makes Trados Cloud more accessible for screen reader users and anyone who relies on keyboard navigation.
 
 ## What is tradosClarity?
 
