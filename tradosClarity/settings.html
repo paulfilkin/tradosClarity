@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tradosClarity Settings</title>
+    <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="icons/icon48.png" alt="tradosClarity" class="header-icon">
+                <div class="header-text">
+                    <h1>tradosClarity Settings</h1>
+                    <p class="subtitle">Accessibility enhancements for Trados Cloud</p>
+                </div>
+            </div>
+        </header>
+
+        <nav class="tabs" role="tablist">
+            <button class="tab-button active" role="tab" aria-selected="true" aria-controls="shortcuts-panel" id="shortcuts-tab">
+                Keyboard Shortcuts
+            </button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="help-panel" id="help-tab">
+                Help
+            </button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="about-panel" id="about-tab">
+                About
+            </button>
+        </nav>
+
+        <main>
+            <!-- Keyboard Shortcuts Panel -->
+            <section id="shortcuts-panel" class="tab-panel active" role="tabpanel" aria-labelledby="shortcuts-tab">
+                <h2>Keyboard Shortcuts</h2>
+                <p class="description">Customize keyboard shortcuts for tradosClarity features. Click on a shortcut to change it.</p>
+                
+                <div class="shortcuts-list">
+                    <div class="shortcut-item">
+                        <div class="shortcut-info">
+                            <h3>Focus Important Action Button</h3>
+                            <p>Quickly focus the most important action button on the page (like "Accept Task" or "Complete Task")</p>
+                        </div>
+                        <div class="shortcut-control">
+                            <button class="shortcut-button" data-action="focusActionButton" aria-label="Change shortcut for Focus Important Action Button">
+                                <span class="shortcut-display">Alt+Shift+A</span>
+                            </button>
+                            <button class="reset-button" data-action="focusActionButton" aria-label="Reset to default shortcut">
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="shortcut-item">
+                        <div class="shortcut-info">
+                            <h3>Restart Product Tours</h3>
+                            <p>Clear tour progress data to restart all product tours from the beginning</p>
+                        </div>
+                        <div class="shortcut-control">
+                            <button class="shortcut-button" data-action="restartTours" aria-label="Change shortcut for Restart Product Tours">
+                                <span class="shortcut-display">Alt+Shift+R</span>
+                            </button>
+                            <button class="reset-button" data-action="restartTours" aria-label="Reset to default shortcut">
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="shortcut-item">
+                        <div class="shortcut-info">
+                            <h3>Tour Navigation: Next Step</h3>
+                            <p>Navigate to the next step in an active product tour</p>
+                        </div>
+                        <div class="shortcut-control">
+                            <span class="shortcut-display fixed">Arrow Right / Arrow Down</span>
+                            <span class="fixed-note">Fixed shortcut</span>
+                        </div>
+                    </div>
+
+                    <div class="shortcut-item">
+                        <div class="shortcut-info">
+                            <h3>Tour Navigation: Previous Step</h3>
+                            <p>Navigate to the previous step in an active product tour</p>
+                        </div>
+                        <div class="shortcut-control">
+                            <span class="shortcut-display fixed">Arrow Left / Arrow Up</span>
+                            <span class="fixed-note">Fixed shortcut</span>
+                        </div>
+                    </div>
+
+                    <div class="shortcut-item">
+                        <div class="shortcut-info">
+                            <h3>Tour Navigation: Exit Tour</h3>
+                            <p>Exit or dismiss the current product tour</p>
+                        </div>
+                        <div class="shortcut-control">
+                            <span class="shortcut-display fixed">Escape</span>
+                            <span class="fixed-note">Fixed shortcut</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="save-shortcuts" class="primary-button">Save Shortcuts</button>
+                    <button id="reset-all-shortcuts" class="secondary-button">Reset All to Defaults</button>
+                </div>
+
+                <div class="recording-modal" id="recording-modal" aria-hidden="true" role="dialog" aria-labelledby="recording-title">
+                    <div class="modal-content">
+                        <h3 id="recording-title">Recording New Shortcut</h3>
+                        <p id="recording-instruction">Press the key combination you want to use for this action.</p>
+                        <div class="recording-display" id="recording-display" aria-live="polite">
+                            Waiting for key combination...
+                        </div>
+                        <div class="modal-actions">
+                            <button id="cancel-recording" class="secondary-button">Cancel</button>
+                            <button id="clear-shortcut" class="secondary-button">Clear Shortcut</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Help Panel -->
+            <section id="help-panel" class="tab-panel" role="tabpanel" aria-labelledby="help-tab">
+                <h2>Help & Support</h2>
+                
+                <div class="help-section">
+                    <h3>User Documentation</h3>
+                    <p>Complete documentation, troubleshooting guides, and usage examples are available on GitHub:</p>
+                    <div class="external-link-card">
+                        <h4>📖 tradosClarity Help Documentation</h4>
+                        <p>Comprehensive guide covering all features, keyboard shortcuts, and troubleshooting steps.</p>
+                        <a href="https://github.com/paulfilkin/tradosClarity/tree/main/Help%20Documentation" 
+                           target="_blank" 
+                           rel="noopener noreferrer" 
+                           class="external-link">
+                            View Documentation on GitHub →
+                        </a>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h3>Quick Reference</h3>
+                    <div class="quick-ref-grid">
+                        <div class="quick-ref-item">
+                            <h4>⚡ Focus Action Button</h4>
+                            <p>Default: <code id="help-focus-shortcut">Alt+Shift+A</code></p>
+                            <p>Finds important buttons like "Accept Task"</p>
+                        </div>
+                        <div class="quick-ref-item">
+                            <h4>↻ Restart Tours</h4>
+                            <p>Default: <code id="help-restart-shortcut">Alt+Shift+R</code></p>
+                            <p>Clears tour progress to restart from beginning</p>
+                        </div>
+                        <div class="quick-ref-item">
+                            <h4>→ Tour Navigation</h4>
+                            <p>Arrow Keys: Navigate steps</p>
+                            <p>Escape: Exit tour</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h3>Extension Status</h3>
+                    <div class="status-info">
+                        <p><strong>Version:</strong> 1.0.0</p>
+                        <p><strong>Active on:</strong> *.trados.com, localhost</p>
+                        <p><strong>Permissions:</strong> Active tab, Storage (settings only)</p>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h3>Need More Help?</h3>
+                    <p>If you can't find what you're looking for in the documentation:</p>
+                    <ul>
+                        <li>Check that you're on a supported Trados Cloud page</li>
+                        <li>Try refreshing the page to reload the extension</li>
+                        <li>Verify your keyboard shortcuts aren't conflicting with other software</li>
+                        <li>Make sure your screen reader is configured for dynamic content announcements</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- About Panel -->
+            <section id="about-panel" class="tab-panel" role="tabpanel" aria-labelledby="about-tab">
+                <h2>About tradosClarity</h2>
+                
+                <div class="about-content">
+                    <div class="version-info">
+                        <h3>Version Information</h3>
+                        <p><strong>Version:</strong> 1.0.0</p>
+                        <p><strong>Last Updated:</strong> <span id="last-updated">Loading...</span></p>
+                    </div>
+
+                    <div class="description">
+                        <h3>Purpose</h3>
+                        <p>tradosClarity was created to make Trados Cloud more accessible for screen reader users and people who rely on keyboard navigation. It addresses common accessibility barriers in the interface and provides helpful shortcuts for efficient workflow.</p>
+                    </div>
+
+                    <div class="features-info">
+                        <h3>Technical Details</h3>
+                        <ul>
+                            <li>Built as a Manifest V3 browser extension</li>
+                            <li>Uses content scripts to enhance page accessibility</li>
+                            <li>Follows WCAG 2.1 AA accessibility guidelines</li>
+                            <li>Compatible with all major screen readers</li>
+                            <li>No data collection or external connections</li>
+                        </ul>
+                    </div>
+
+                    <div class="permissions">
+                        <h3>Permissions</h3>
+                        <p>This extension requires the following permissions:</p>
+                        <ul>
+                            <li><strong>activeTab:</strong> To enhance accessibility on the current Trados page</li>
+                            <li><strong>Host permissions:</strong> To run on Trados Cloud domains and localhost for development</li>
+                        </ul>
+                        <p>No personal data is collected or transmitted.</p>
+                    </div>
+
+                    <div class="support">
+                        <h3>Support & Feedback</h3>
+                        <p>If you encounter issues or have suggestions for improvement, please:</p>
+                        <ul>
+                            <li>Check the troubleshooting section in the Help tab</li>
+                            <li>Make sure you're using the latest version of the extension</li>
+                            <li>Report specific issues with details about your browser and screen reader</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+</html>

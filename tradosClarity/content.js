@@ -7,12 +7,19 @@ class TradosTourAccessibility {
     this.currentStep = 0;
     this.totalSteps = 0;
     this.activePopover = null;
+    this.shortcuts = {};
     
     console.log('tradosClarity: Initializing for help-tour-popover elements');
     this.init();
   }
 
   init() {
+    // Load shortcuts from storage
+    this.loadShortcuts();
+    
+    // Set up message listener for popup communication
+    this.setupMessageListener();
+    
     // Check for existing tour popovers immediately and repeatedly
     this.enhanceExistingPopovers();
     
@@ -27,6 +34,267 @@ class TradosTourAccessibility {
     
     // NEW: Check for important action buttons
     this.announceImportantButtons();
+  }
+
+  async loadShortcuts() {
+    try {
+      const result = await chrome.storage.sync.get('tradosShortcuts');
+      this.shortcuts = result.tradosShortcuts || {
+        focusActionButton: { key: 'a', alt: true, shift: true, ctrl: false },
+        restartTours: { key: 'r', alt: true, shift: true, ctrl: false }
+      };
+      console.log('tradosClarity: Loaded shortcuts:', this.shortcuts);
+    } catch (error) {
+      console.error('tradosClarity: Error loading shortcuts:', error);
+      // Use defaults if loading fails
+      this.shortcuts = {
+        focusActionButton: { key: 'a', alt: true, shift: true, ctrl: false },
+        restartTours: { key: 'r', alt: true, shift: true, ctrl: false }
+      };
+    }
+  }
+
+  setupMessageListener() {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      console.log('tradosClarity: Received message:', message);
+      
+      switch (message.type) {
+        case 'executeAction':
+          this.handleAction(message.action);
+          sendResponse({ success: true });
+          break;
+          
+        case 'shortcutsUpdated':
+          this.shortcuts = message.shortcuts;
+          console.log('tradosClarity: Updated shortcuts:', this.shortcuts);
+          sendResponse({ success: true });
+          break;
+          
+        default:
+          console.log('tradosClarity: Unknown message type:', message.type);
+          sendResponse({ success: false, error: 'Unknown message type' });
+      }
+    });
+  }
+
+  handleAction(action) {
+    console.log(`tradosClarity: Executing action: ${action}`);
+    
+    switch (action) {
+      case 'focusActionButton':
+        this.focusImportantActionButton();
+        break;
+        
+      case 'restartTours':
+        this.restartProductTours();
+        break;
+        
+      default:
+        console.error(`tradosClarity: Unknown action: ${action}`);
+    }
+  }
+
+  restartProductTours() {
+    console.log('tradosClarity: Restarting product tours...');
+    
+    try {
+      // Common tour progress keys to clear
+      const tourKeys = [
+        // Trados-specific keys (based on actual data seen)
+        'ue_', // All ue_ prefixed keys (ue_ConfirmSegmentTour, etc.)
+        
+        // Generic tour keys
+        'tour_progress',
+        'tour_completed',
+        'tour_state',
+        'help_tour',
+        'product_tour',
+        'onboarding_tour',
+        'guided_tour',
+        'tutorial_progress',
+        'walkthrough_state',
+        
+        // Trados-specific keys (common patterns)
+        'trados_tour',
+        'trados_help',
+        'trados_onboarding',
+        'cloud_tour',
+        'editor_tour',
+        'workflow_tour',
+        'project_tour',
+        
+        // Pattern-based clearing for numbered/dated tours
+        'tour_',
+        'help_',
+        'guide_',
+        'intro_',
+        'first_',
+        'welcome_',
+        
+        // Framework-specific tour libraries
+        'shepherd-tour',
+        'hopscotch',
+        'intro.js',
+        'driver.js',
+        'reactour',
+        'enjoyhint'
+      ];
+      
+      let clearedCount = 0;
+      
+      // Clear localStorage
+      if (typeof localStorage !== 'undefined') {
+        console.log('tradosClarity: Scanning localStorage for tour data...');
+        const localStorageKeys = Object.keys(localStorage);
+        
+        localStorageKeys.forEach(key => {
+          const lowerKey = key.toLowerCase();
+          const shouldRemove = tourKeys.some(pattern => {
+            if (pattern.endsWith('_')) {
+              return lowerKey.startsWith(pattern);
+            }
+            return lowerKey.includes(pattern);
+          });
+          
+          if (shouldRemove) {
+            console.log(`tradosClarity: Removing localStorage key: ${key}`);
+            localStorage.removeItem(key);
+            clearedCount++;
+          }
+        });
+      }
+      
+      // Clear sessionStorage
+      if (typeof sessionStorage !== 'undefined') {
+        console.log('tradosClarity: Scanning sessionStorage for tour data...');
+        const sessionStorageKeys = Object.keys(sessionStorage);
+        
+        sessionStorageKeys.forEach(key => {
+          const lowerKey = key.toLowerCase();
+          const shouldRemove = tourKeys.some(pattern => {
+            if (pattern.endsWith('_')) {
+              return lowerKey.startsWith(pattern);
+            }
+            return lowerKey.includes(pattern);
+          });
+          
+          if (shouldRemove) {
+            console.log(`tradosClarity: Removing sessionStorage key: ${key}`);
+            sessionStorage.removeItem(key);
+            clearedCount++;
+          }
+        });
+      }
+      
+      // Also clear some common cookie patterns (if we can access them)
+      try {
+        const cookies = document.cookie.split(';');
+        cookies.forEach(cookie => {
+          const [name] = cookie.split('=');
+          const cleanName = name.trim().toLowerCase();
+          
+          const shouldRemove = tourKeys.some(pattern => {
+            if (pattern.endsWith('_')) {
+              return cleanName.startsWith(pattern);
+            }
+            return cleanName.includes(pattern);
+          });
+          
+          if (shouldRemove) {
+            console.log(`tradosClarity: Attempting to clear cookie: ${name.trim()}`);
+            // Clear cookie by setting it to expire in the past
+            document.cookie = `${name.trim()}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+            document.cookie = `${name.trim()}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
+            clearedCount++;
+          }
+        });
+      } catch (error) {
+        console.log('tradosClarity: Could not access cookies:', error);
+      }
+      
+      console.log(`tradosClarity: Tour restart complete. Cleared ${clearedCount} items.`);
+      
+      // Announce the result
+      let message;
+      if (clearedCount > 0) {
+        message = `Tour data cleared! ${clearedCount} items removed. Refreshing page to restart tours...`;
+        
+        this.announceMessage(message);
+        this.showVisualNotification(message, 'success');
+        
+        // Refresh the page after a short delay to allow the user to see the notification
+        setTimeout(() => {
+          console.log('tradosClarity: Refreshing page to restart tours...');
+          window.location.reload();
+        }, 2000); // 2 second delay
+        
+      } else {
+        message = 'No tour data found to clear. Tours may already be reset or use a different storage method.';
+        this.announceMessage(message);
+        this.showVisualNotification(message, 'info');
+      }
+      
+    } catch (error) {
+      console.error('tradosClarity: Error restarting tours:', error);
+      this.announceMessage('Error occurred while trying to restart tours.');
+      this.showVisualNotification('Error occurred while trying to restart tours.', 'error');
+    }
+  }
+
+  showVisualNotification(message, type = 'info') {
+    // Create a temporary visual notification
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed !important;
+      top: 20px !important;
+      right: 20px !important;
+      background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'} !important;
+      color: white !important;
+      padding: 16px 20px !important;
+      border-radius: 8px !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+      z-index: 999999 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      max-width: 300px !important;
+      opacity: 0 !important;
+      transform: translateX(100%) !important;
+      transition: all 0.3s ease !important;
+    `;
+    
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    // Animate in
+    requestAnimationFrame(() => {
+      notification.style.opacity = '1';
+      notification.style.transform = 'translateX(0)';
+    });
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100%)';
+      
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 5000);
+    
+    // Also make it clickable to dismiss
+    notification.addEventListener('click', () => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100%)';
+      
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    });
   }
 
   setupInitialScan() {
@@ -380,29 +648,6 @@ class TradosTourAccessibility {
       }, 50);
     }, 100);
     
-    // Strategy 3: Also create a temporary visible announcement for testing
-    let tempVisibleAnnouncer = document.createElement('div');
-    tempVisibleAnnouncer.style.cssText = `
-      position: fixed !important;
-      top: 10px !important;
-      left: 10px !important;
-      background: yellow !important;
-      color: black !important;
-      padding: 10px !important;
-      border: 2px solid red !important;
-      z-index: 999999 !important;
-      font-size: 16px !important;
-    `;
-    tempVisibleAnnouncer.textContent = '[DEBUG] ' + message;
-    document.body.appendChild(tempVisibleAnnouncer);
-    
-    // Remove the visible announcer after 5 seconds
-    setTimeout(() => {
-      if (tempVisibleAnnouncer.parentNode) {
-        tempVisibleAnnouncer.parentNode.removeChild(tempVisibleAnnouncer);
-      }
-    }, 5000);
-    
     // Clear the main announcement after a few seconds so it doesn't repeat
     setTimeout(() => {
       announcer.textContent = '';
@@ -469,23 +714,32 @@ class TradosTourAccessibility {
         return; // Don't handle other shortcuts when tour is active
       }
 
-      // Handle important action button focus - try multiple key combinations
-      // Alt+Shift+A (less likely to conflict)
-      if (e.altKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+      // Handle custom shortcuts using loaded settings
+      // Focus action button shortcut
+      const focusShortcut = this.shortcuts.focusActionButton;
+      if (focusShortcut && this.matchesShortcut(e, focusShortcut)) {
         e.preventDefault();
-        console.log('tradosClarity: Alt+Shift+A pressed - attempting to focus action button');
+        console.log('tradosClarity: Focus action button shortcut triggered');
         this.focusImportantActionButton();
         return;
       }
       
-      // Backup: Alt+A (simpler)
-      if (e.altKey && !e.shiftKey && !e.ctrlKey && e.key.toLowerCase() === 'a') {
+      // Restart tours shortcut
+      const restartShortcut = this.shortcuts.restartTours;
+      if (restartShortcut && this.matchesShortcut(e, restartShortcut)) {
         e.preventDefault();
-        console.log('tradosClarity: Alt+A pressed - attempting to focus action button');
-        this.focusImportantActionButton();
+        console.log('tradosClarity: Restart tours shortcut triggered');
+        this.restartProductTours();
         return;
       }
     });
+  }
+
+  matchesShortcut(event, shortcut) {
+    return event.key.toLowerCase() === shortcut.key.toLowerCase() &&
+           event.ctrlKey === !!shortcut.ctrl &&
+           event.altKey === !!shortcut.alt &&
+           event.shiftKey === !!shortcut.shift;
   }
 
   focusImportantActionButton() {
@@ -784,14 +1038,6 @@ class TradosTourAccessibility {
     }
   }
 
-  categorizeAction(text) {
-    if (text.includes('accept')) return 'accept';
-    if (text.includes('complete')) return 'complete';
-    if (text.includes('submit')) return 'submit';
-    if (text.includes('start') || text.includes('begin')) return 'start';
-    return 'action';
-  }
-
   announceActionButtons(buttons) {
     // Store the button for later access
     this.importantActionButton = buttons[0]?.element;
@@ -802,132 +1048,19 @@ class TradosTourAccessibility {
     if (buttons.length === 1) {
       const button = buttons[0];
       if (button.action === 'accept') {
-        message = `Important: You need to accept this task before you can start working. "${button.text}" button is now focused. Press Enter to accept, or Escape to skip.`;
+        message = `Important: You need to accept this task before you can start working. "${button.text}" button is available. Use your focus action button shortcut to focus it.`;
       } else if (button.action === 'complete') {
-        message = `Task ready to complete. "${button.text}" button is now focused. Press Enter to complete, or Escape to skip.`;
+        message = `Task ready to complete. "${button.text}" button is available. Use your focus action button shortcut to focus it.`;
       } else {
-        message = `Important action required: "${button.text}" button is now focused. Press Enter to activate.`;
+        message = `Important action required: "${button.text}" button is available. Use your focus action button shortcut to focus it.`;
       }
     } else {
       const buttonTexts = buttons.map(b => `"${b.text}"`).join(', ');
-      message = `${buttons.length} important actions available: ${buttonTexts}. First button is focused - press Enter to activate.`;
+      message = `${buttons.length} important actions available: ${buttonTexts}. Use your focus action button shortcut to focus the first one.`;
     }
     
     console.log('tradosClarity: Announcing action buttons:', message);
-    
-    // Immediately focus the important button
-    this.autoFocusImportantButton();
-    
-    // Announce after focusing
     this.announceMessage(message);
-    
-    // Also create a temporary visible announcement for testing
-    if (buttons.some(b => b.action === 'accept')) {
-      let tempVisibleAnnouncer = document.createElement('div');
-      tempVisibleAnnouncer.style.cssText = `
-        position: fixed !important;
-        top: 10px !important;
-        left: 10px !important;
-        background: orange !important;
-        color: black !important;
-        padding: 10px !important;
-        border: 2px solid red !important;
-        z-index: 999999 !important;
-        font-size: 16px !important;
-        font-weight: bold !important;
-      `;
-      tempVisibleAnnouncer.textContent = '[DEBUG] ' + message;
-      document.body.appendChild(tempVisibleAnnouncer);
-      
-      // Remove after 10 seconds
-      setTimeout(() => {
-        if (tempVisibleAnnouncer.parentNode) {
-          tempVisibleAnnouncer.parentNode.removeChild(tempVisibleAnnouncer);
-        }
-      }, 10000);
-    }
-  }
-
-  autoFocusImportantButton() {
-    if (!this.importantActionButton) {
-      console.log('tradosClarity: No button to focus');
-      return;
-    }
-    
-    console.log('tradosClarity: Auto-focusing important action button:', this.importantActionButton);
-    console.log('tradosClarity: Button is connected to DOM:', document.body.contains(this.importantActionButton));
-    console.log('tradosClarity: Button is visible:', this.importantActionButton.offsetParent !== null);
-    console.log('tradosClarity: Button text:', this.importantActionButton.textContent?.trim());
-    
-    // Try multiple focus attempts with different delays
-    const focusAttempts = [100, 500, 1000, 2000];
-    
-    focusAttempts.forEach((delay, index) => {
-      setTimeout(() => {
-        console.log(`tradosClarity: Focus attempt ${index + 1} at ${delay}ms`);
-        
-        if (document.body.contains(this.importantActionButton) && 
-            this.importantActionButton.offsetParent !== null) {
-          
-          // Scroll into view
-          this.importantActionButton.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
-          
-          // Try multiple focus methods
-          setTimeout(() => {
-            console.log('tradosClarity: Attempting to focus button');
-            
-            // Method 1: Direct focus
-            this.importantActionButton.focus();
-            
-            // Check if it worked
-            setTimeout(() => {
-              const activeElement = document.activeElement;
-              console.log('tradosClarity: Active element after focus:', activeElement);
-              console.log('tradosClarity: Focus successful:', activeElement === this.importantActionButton);
-              
-              if (activeElement === this.importantActionButton) {
-                console.log('tradosClarity: ✅ Button focused successfully!');
-                this.announceMessage(`"${this.importantActionButton.textContent?.trim()}" button is now focused. Press Enter to activate.`);
-              } else {
-                console.log('tradosClarity: ❌ Focus attempt failed, trying alternative methods');
-                
-                // Method 2: Click to focus (if direct focus failed)
-                if (index === focusAttempts.length - 1) { // Last attempt
-                  this.tryAlternativeFocusMethods();
-                }
-              }
-            }, 100);
-            
-          }, 100);
-        } else {
-          console.log('tradosClarity: Button not available for focus at this time');
-        }
-      }, delay);
-    });
-  }
-
-  tryAlternativeFocusMethods() {
-    console.log('tradosClarity: Trying alternative focus methods');
-    
-    // Method 2: Set tabindex and focus
-    const originalTabIndex = this.importantActionButton.tabIndex;
-    this.importantActionButton.tabIndex = 0;
-    this.importantActionButton.focus();
-    
-    setTimeout(() => {
-      if (document.activeElement === this.importantActionButton) {
-        console.log('tradosClarity: ✅ Alternative focus method worked!');
-        this.announceMessage(`"${this.importantActionButton.textContent?.trim()}" button is now focused. Press Enter to activate.`);
-      } else {
-        console.log('tradosClarity: ❌ All focus methods failed');
-        
-        // Method 3: Just announce location without focus
-        this.announceMessage(`Important: "${this.importantActionButton.textContent?.trim()}" button is available. Navigate to it using your screen reader.`);
-      }
-    }, 100);
   }
 
   ensureId(element, prefix = 'trados-tour') {
