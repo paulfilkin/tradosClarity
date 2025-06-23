@@ -1,4 +1,4 @@
-| <img src="tradosClarity/icons/icon48.png" alt="tradosClarity" width="48"> | # tradosClarity - Developer Guide |
+| <img src="tradosClarity/icons/icon128.png" alt="tradosClarity" width="80"> | <h1>tradosClarity - Developer Guide</h1> |
 |:---:|:---|
 | | An Open Source project to build a browser extension that enhances the accessibility of Trados Cloud for screen reader users and keyboard navigation. |
 
