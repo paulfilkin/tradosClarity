@@ -1,19 +1,11 @@
-<style>
-.header-table {
-  border: none !important;
-}
-.header-table td, .header-table th {
-  border: none !important;
-  padding: 0 !important;
-}
-</style>
-
-<table class="header-table">
+<table border="0" cellpadding="0" cellspacing="0">
 <tr>
 <td><img src="tradosClarity/icons/icon128.png" alt="tradosClarity" width="80"></td>
 <td><h1>tradosClarity - Developer Guide</h1></td>
 </tr>
 </table>
+
+An Open Source project to build a browser extension that enhances the accessibility of Trados Cloud for screen reader users and keyboard navigation.
 
 ## About This Project
 
