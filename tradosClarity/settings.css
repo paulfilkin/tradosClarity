@@ -1,5 +1,8 @@
-﻿/* tradosClarity Settings Page Styles */
+/* ============================================================================= */
+/* TRADOSCLARITY SETTINGS PAGE STYLES */
+/* ============================================================================= */
 
+/* RESET & BASE STYLES */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -13,6 +16,7 @@ body {
     background-color: #f5f5f5;
 }
 
+/* LAYOUT CONTAINER */
 .container {
     max-width: 900px;
     margin: 0 auto;
@@ -20,6 +24,10 @@ body {
     min-height: 100vh;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
 }
+
+/* ============================================================================= */
+/* HEADER SECTION */
+/* ============================================================================= */
 
 header {
     background: linear-gradient(135deg, #2d5a5a 0%, #1a4040 100%);
@@ -62,6 +70,10 @@ header .subtitle {
     margin: 0;
 }
 
+/* ============================================================================= */
+/* TAB NAVIGATION */
+/* ============================================================================= */
+
 .tabs {
     display: flex;
     background: #f8f9fa;
@@ -78,7 +90,6 @@ header .subtitle {
     color: #666;
     border-bottom: 3px solid transparent;
     transition: all 0.3s ease;
-    position: relative;
 }
 
 .tab-button:hover {
@@ -96,6 +107,10 @@ header .subtitle {
     outline: 2px solid #2d5a5a;
     outline-offset: -2px;
 }
+
+/* ============================================================================= */
+/* MAIN CONTENT AREA */
+/* ============================================================================= */
 
 main {
     padding: 2rem;
@@ -121,7 +136,10 @@ main {
     font-size: 1.1rem;
 }
 
-/* Shortcuts Styles */
+/* ============================================================================= */
+/* KEYBOARD SHORTCUTS SECTION */
+/* ============================================================================= */
+
 .shortcuts-list {
     display: flex;
     flex-direction: column;
@@ -166,6 +184,7 @@ main {
     gap: 0.5rem;
 }
 
+/* SHORTCUT BUTTONS */
 .shortcut-button {
     background: white;
     border: 2px solid #2d5a5a;
@@ -241,6 +260,10 @@ main {
     outline-offset: 2px;
 }
 
+/* ============================================================================= */
+/* ACTION BUTTONS */
+/* ============================================================================= */
+
 .actions {
     display: flex;
     gap: 1rem;
@@ -292,7 +315,10 @@ main {
     outline-offset: 2px;
 }
 
-/* Recording Modal */
+/* ============================================================================= */
+/* RECORDING MODAL */
+/* ============================================================================= */
+
 .recording-modal {
     position: fixed;
     top: 0;
@@ -351,7 +377,10 @@ main {
     margin-top: 1.5rem;
 }
 
-/* Help Styles */
+/* ============================================================================= */
+/* HELP & ABOUT SECTIONS */
+/* ============================================================================= */
+
 .help-section {
     margin-bottom: 2.5rem;
     padding-bottom: 1.5rem;
@@ -474,7 +503,6 @@ main {
     font-size: 0.95rem;
 }
 
-/* About Styles */
 .about-content {
     display: flex;
     flex-direction: column;
@@ -505,7 +533,10 @@ main {
     margin-bottom: 0.5rem;
 }
 
-/* Responsive Design */
+/* ============================================================================= */
+/* RESPONSIVE DESIGN */
+/* ============================================================================= */
+
 @media (max-width: 768px) {
     .container {
         margin: 0;
@@ -563,7 +594,10 @@ main {
     }
 }
 
-/* High Contrast Mode */
+/* ============================================================================= */
+/* ACCESSIBILITY ENHANCEMENTS */
+/* ============================================================================= */
+
 @media (prefers-contrast: high) {
     .tab-button.active {
         background: ButtonFace;
@@ -584,10 +618,24 @@ main {
     }
 }
 
-/* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
     * {
         animation: none !important;
         transition: none !important;
     }
+}
+
+/* ============================================================================= */
+/* SCREEN READER ONLY CONTENT */
+/* ============================================================================= */
+
+.trados-live-region,
+.trados-step-counter {
+    position: absolute !important;
+    left: -10000px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(1px, 1px, 1px, 1px) !important;
+    white-space: nowrap !important;
 }
