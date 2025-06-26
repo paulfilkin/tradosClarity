@@ -456,14 +456,12 @@ class ActionButtonManager {
           tag: target.tagName,
           id: target.id,
           className: target.className,
-          text: target.textContent?.trim()
+          text: target.textContent && target.textContent.trim()
         });
         
         if (this.isSplitButton(target)) {
           console.log('tradosClarity: Split button activated:', target.id);
           setTimeout(() => this.findAndEnhanceDropdown(), 100);
-        } else {
-          console.log('tradosClarity: Not a split button');
         }
       }
     });
@@ -475,7 +473,7 @@ class ActionButtonManager {
         tag: target.tagName,
         id: target.id,
         className: target.className,
-        text: target.textContent?.trim()
+        text: target.textContent && target.textContent.trim()
       });
       
       const splitButton = target.closest('[id*="splitbutton"]') || 
@@ -522,76 +520,69 @@ class ActionButtonManager {
   findAndEnhanceDropdown() {
     console.log('tradosClarity: Looking for panel or dropdown...');
     
+    // Multi-attempt search with delays
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      setTimeout(() => {
+        console.log(`tradosClarity: Search attempt ${attempt} after ${(attempt-1) * 200}ms`);
+        if (this.searchForPanel()) {
+          console.log('tradosClarity: Panel found and enhanced');
+          return;
+        }
+      }, (attempt - 1) * 200);
+    }
+  }
+
+  searchForPanel() {
+    // Look for main Import History grid panels first
+    const mainImportHistoryPanels = document.querySelectorAll('.import-history-grid:not([data-trados-enhanced])');
+    console.log('tradosClarity: Found', mainImportHistoryPanels.length, 'main import history grid panels');
+    
+    // Check main panels first
+    for (const panel of mainImportHistoryPanels) {
+      console.log('tradosClarity: Main Import History panel found:', {
+        id: panel.id,
+        className: panel.className,
+        visible: this.isVisible(panel)
+      });
+      
+      if (this.isVisible(panel)) {
+        console.log('tradosClarity: Found visible panel:', panel.id);
+        this.enhanceImportPanel(panel);
+        return true;
+      }
+    }
+    
     // Look specifically for Import History panels (including hidden ones)
     const importHistoryPanels = document.querySelectorAll(`
       [id*="import-history"]:not([data-trados-enhanced]),
       [id*="tm-import-history"]:not([data-trados-enhanced])
     `);
-    
     console.log('tradosClarity: Found', importHistoryPanels.length, 'import history specific panels');
     
     for (const panel of importHistoryPanels) {
-      console.log('tradosClarity: Import History panel found:', {
-        id: panel.id,
-        visible: this.isVisible(panel),
-        display: panel.style.display,
-        visibility: panel.style.visibility,
-        offsetParent: !!panel.offsetParent
-      });
-      
-      // If the panel exists but is hidden, try to show it
-      if (!this.isVisible(panel)) {
-        console.log('tradosClarity: Attempting to show hidden Import History panel');
-        this.tryToShowPanel(panel);
-        
-        // Check if it's visible now
-        setTimeout(() => {
-          if (this.isVisible(panel)) {
-            console.log('tradosClarity: Successfully showed Import History panel');
-            this.enhanceImportPanel(panel);
-          } else {
-            console.log('tradosClarity: Could not show Import History panel');
-          }
-        }, 200);
-        return true;
-      } else {
+      if (this.isVisible(panel)) {
         console.log('tradosClarity: Found visible Import History panel:', panel.id);
         this.enhanceImportPanel(panel);
         return true;
       }
     }
     
-    // Look for panels that contain "Import History" text (including hidden ones)
-    const allPanels = document.querySelectorAll('.x-panel:not([data-trados-enhanced]), .x-window:not([data-trados-enhanced]), .x-tip:not([data-trados-enhanced])');
-    
+    // Look for panels that contain "Import History" text
+    const allPanels = document.querySelectorAll('.x-panel:not([data-trados-enhanced]), .x-window:not([data-trados-enhanced])');
     console.log('tradosClarity: Checking', allPanels.length, 'general panels for Import History text');
     
     for (const panel of allPanels) {
       const text = panel.textContent || '';
-      if (text.includes('Import History')) {
-        console.log('tradosClarity: Found panel with Import History text:', panel.id || panel.className, 'visible:', this.isVisible(panel));
-        
-        if (!this.isVisible(panel)) {
-          this.tryToShowPanel(panel);
-          setTimeout(() => {
-            if (this.isVisible(panel)) {
-              this.enhanceImportPanel(panel);
-            }
-          }, 200);
-        } else {
-          this.enhanceImportPanel(panel);
-        }
+      if (text.includes('Import History') && this.isVisible(panel)) {
+        console.log('tradosClarity: Found panel with Import History text:', panel.id || panel.className);
+        this.enhanceImportPanel(panel);
         return true;
       }
     }
     
     // Last resort - look for any recently shown dropdown
-    const dropdownMenus = document.querySelectorAll(`
-      .x-menu:not([data-trados-enhanced]):not([style*="display: none"]):not([style*="visibility: hidden"]),
-      .x-boundlist:not([data-trados-enhanced]):not([style*="display: none"]):not([style*="visibility: hidden"])
-    `);
-
-    console.log('tradosClarity: Found', dropdownMenus.length, 'dropdown menus as fallback');
+    const dropdownMenus = document.querySelectorAll('.x-menu:not([data-trados-enhanced]), .x-boundlist:not([data-trados-enhanced])');
+    console.log('tradosClarity: Found', dropdownMenus.length, 'potential dropdown menus');
 
     for (const menu of dropdownMenus) {
       if (this.isVisible(menu)) {
@@ -605,66 +596,16 @@ class ActionButtonManager {
     return false;
   }
 
-  tryToShowPanel(panel) {
-    console.log('tradosClarity: Trying to show panel:', panel.id);
-    
-    // Method 1: Remove display/visibility styles
-    panel.style.display = '';
-    panel.style.visibility = '';
-    
-    // Method 2: Set explicit visible styles
-    if (!this.isVisible(panel)) {
-      panel.style.display = 'block';
-      panel.style.visibility = 'visible';
-    }
-    
-    // Method 3: Look for parent containers that might be hidden
-    let parent = panel.parentElement;
-    while (parent && parent !== document.body) {
-      if (parent.style.display === 'none' || parent.style.visibility === 'hidden') {
-        console.log('tradosClarity: Found hidden parent:', parent.id || parent.className);
-        parent.style.display = '';
-        parent.style.visibility = '';
-      }
-      parent = parent.parentElement;
-    }
-    
-    // Method 4: Try to trigger show via ExtJS (if it has show method)
-    try {
-      if (panel.show && typeof panel.show === 'function') {
-        panel.show();
-      }
-    } catch (e) {
-      // Ignore errors
-    }
-  }
-
-  looksLikeImportPanel(element) {
-    // Check if this element or its children contain "Import History" text
-    const text = element.textContent || '';
-    const hasImportHistory = text.includes('Import History');
-    
-    // Check for specific import-related IDs
-    const id = element.id || '';
-    const hasImportId = id.includes('import-history') || id.includes('tm-import-history');
-    
-    // Check if it has the typical panel structure
-    const hasHeader = element.querySelector('.x-panel-header, .x-header');
-    const hasGrid = element.querySelector('[role="grid"], .x-grid');
-    
-    // More specific check - look for the exact "Import History" title
-    const hasImportTitle = element.querySelector('[id*="import-history"][id*="title"]') ||
-                          element.querySelector('.x-title-text, .x-panel-header-title')?.textContent?.includes('Import History');
-    
-    console.log('tradosClarity: Panel check - hasImportHistory:', hasImportHistory, 'hasHeader:', !!hasHeader, 'hasGrid:', !!hasGrid, 'hasImportId:', hasImportId, 'hasImportTitle:', !!hasImportTitle, 'element:', element.id);
-    
-    // Only consider it an import panel if it has "Import History" in text OR has import-specific ID
-    return hasImportHistory || hasImportId || hasImportTitle;
-  }
-
   enhanceImportPanel(panel) {
     console.log('tradosClarity: Enhancing Import History panel:', panel.id);
     panel.setAttribute('data-trados-enhanced', 'true');
+
+    // Store the element that had focus before opening the panel
+    const previouslyFocused = document.activeElement;
+    if (previouslyFocused && previouslyFocused !== document.body && !panel.contains(previouslyFocused)) {
+      panel._previousFocus = previouslyFocused;
+      console.log('tradosClarity: Stored previous focus element:', previouslyFocused);
+    }
 
     // Make the panel focusable and accessible
     if (!panel.getAttribute('role')) {
@@ -676,7 +617,7 @@ class ActionButtonManager {
     // Find the Import History title specifically
     const importTitle = panel.querySelector('[id*="import-history"][id*="title"]') ||
                        Array.from(panel.querySelectorAll('.x-title-text, .x-panel-header-title')).find(el => 
-                         el.textContent?.includes('Import History'));
+                         el.textContent && el.textContent.includes('Import History'));
 
     let headerToFocus = null;
 
@@ -707,7 +648,7 @@ class ActionButtonManager {
       this.setupPanelKeyboardNavigation(panel, interactiveElements);
     }
 
-    // CRITICAL: Focus management - move focus into the panel immediately
+    // Focus management - move focus into the panel immediately
     setTimeout(() => {
       if (headerToFocus) {
         console.log('tradosClarity: Focusing Import History header');
@@ -724,7 +665,7 @@ class ActionButtonManager {
         panel.focus();
         this.announce(`Import History panel opened. Contains ${interactiveElements.length} interactive elements. Use Tab to navigate, Escape to close.`);
       }
-    }, 200); // Longer delay to ensure panel is fully rendered
+    }, 200);
   }
 
   findInteractiveElements(panel) {
@@ -762,7 +703,7 @@ class ActionButtonManager {
   }
 
   makeElementsAccessible(elements) {
-    elements.forEach((element, index) => {
+    elements.forEach((element) => {
       // Ensure proper roles
       if (!element.getAttribute('role') && !element.matches('button, input, select, textarea, a[href]')) {
         element.setAttribute('role', 'button');
@@ -781,8 +722,8 @@ class ActionButtonManager {
         case 'Escape':
           e.preventDefault();
           e.stopPropagation();
-          console.log('tradosClarity: Closing panel with Escape');
-          this.forceClosePanel(panel);
+          console.log('tradosClarity: Closing Import History panel with escape');
+          this.forceCloseImportPanel(panel);
           break;
         case 'Tab':
           // Let normal tab navigation work, but ensure we stay within the panel
@@ -836,131 +777,392 @@ class ActionButtonManager {
     }
   }
 
-  forceClosePanel(panel) {
-    console.log('tradosClarity: Attempting to close panel');
+  forceCloseImportPanel(panel) {
+    console.log('tradosClarity: Attempting to close Import History panel:', panel.id);
     
-    // Remove our event listener
+    // Step 1: Find a meaningful place to return focus before closing the panel
+    let targetFocusElement = null;
+    
+    // First priority: return to where the user was before opening the panel
+    if (panel._previousFocus && document.body.contains(panel._previousFocus) && this.isVisible(panel._previousFocus)) {
+      targetFocusElement = panel._previousFocus;
+      console.log('tradosClarity: Will return focus to previously focused element:', targetFocusElement);
+    }
+    
+    // Second priority: Look for the Import button that originally opened this panel
+    if (!targetFocusElement) {
+      const importButton = document.querySelector('[id*="splitbutton"]:not([style*="display: none"]), .x-btn:not([style*="display: none"])');
+      if (importButton && this.isVisible(importButton)) {
+        const buttonText = importButton.textContent && importButton.textContent.toLowerCase() || '';
+        if (buttonText.includes('import')) {
+          targetFocusElement = importButton;
+          console.log('tradosClarity: Will return focus to Import button');
+        }
+      }
+    }
+    
+    // Fallback to other meaningful elements
+    if (!targetFocusElement) {
+      // Try to find a header or navigation element that provides context
+      const meaningfulElements = [
+        'h1, h2, h3', // Page headings
+        '[role="main"] h1, [role="main"] h2', // Main content headings  
+        '.x-panel-header-title', // Panel titles
+        '[aria-label*="Translation Memories"]', // TM-specific elements
+        '.x-toolbar button:first-child', // First toolbar button
+        '#main-content', // Main content area
+        '[role="main"]' // Main landmark
+      ];
+      
+      for (const selector of meaningfulElements) {
+        const element = document.querySelector(selector);
+        if (element && this.isVisible(element)) {
+          targetFocusElement = element;
+          console.log('tradosClarity: Will return focus to:', selector);
+          break;
+        }
+      }
+    }
+    
+    // Final fallback
+    if (!targetFocusElement) {
+      targetFocusElement = document.body;
+      console.log('tradosClarity: Will return focus to document body as fallback');
+    }
+    
+    // Move focus away from panel before hiding
+    if (document.activeElement && panel.contains(document.activeElement)) {
+      console.log('tradosClarity: Moving focus away from panel before closing');
+      
+      // Make the target element focusable if needed
+      if (!targetFocusElement.hasAttribute('tabindex') && 
+          !targetFocusElement.matches('button, a[href], input, select, textarea, [tabindex]')) {
+        targetFocusElement.setAttribute('tabindex', '-1');
+        // Schedule removal of tabindex after focusing
+        setTimeout(() => {
+          if (targetFocusElement.getAttribute('tabindex') === '-1') {
+            targetFocusElement.removeAttribute('tabindex');
+          }
+        }, 1000);
+      }
+      
+      targetFocusElement.focus();
+    }
+
+    // Step 2: Remove our event listeners to prevent memory leaks
     if (panel._tradosKeyHandler) {
       document.removeEventListener('keydown', panel._tradosKeyHandler, true);
       delete panel._tradosKeyHandler;
     }
     
-    // Try to find and click close button
+    // Clean up stored references
+    if (panel._previousFocus) {
+      delete panel._previousFocus;
+    }
+
+    // Step 3: Try to find and click the actual close button first
     const closeSelectors = [
       '.x-tool-close',
-      '.x-btn-close', 
+      '.x-panel-header-title-tools .x-tool',
+      '.x-window-header-tools .x-tool-close',
       '[aria-label*="close"]',
       '[title*="close"]',
-      '.close',
       'button[onclick*="close"]'
     ];
 
     for (const selector of closeSelectors) {
       const closeBtn = panel.querySelector(selector);
-      if (closeBtn) {
-        console.log('tradosClarity: Found close button:', selector);
+      if (closeBtn && this.isVisible(closeBtn)) {
+        console.log('tradosClarity: Found and clicking close button:', selector);
         closeBtn.click();
-        return;
+        return; // Let the normal close process handle it
       }
     }
 
-    // Try hiding the panel
-    panel.style.display = 'none';
-    panel.style.visibility = 'hidden';
+    // Step 4: Try to close by looking for parent modal/window structures
+    let currentElement = panel.parentElement;
+    let attempts = 0;
+    while (currentElement && attempts < 5) {
+      attempts++;
+      
+      // Look for ExtJS window or modal containers
+      if (currentElement.classList.contains('x-window') || 
+          currentElement.classList.contains('x-modal') ||
+          currentElement.id.includes('window')) {
+        
+        const windowCloseBtn = currentElement.querySelector('.x-tool-close, .x-window-close');
+        if (windowCloseBtn) {
+          console.log('tradosClarity: Found window close button');
+          windowCloseBtn.click();
+          return;
+        }
+      }
+      
+      currentElement = currentElement.parentElement;
+    }
+
+    // Step 5: Hide only the specific panel and its immediate modal parent (if any)
+    console.log('tradosClarity: Hiding panel directly');
     
-    // Try removing if it seems to be a floating panel
-    const style = window.getComputedStyle(panel);
-    if (style.position === 'absolute' || style.position === 'fixed') {
-      try {
-        panel.remove();
-      } catch (e) {
-        console.log('tradosClarity: Could not remove panel');
-      }
+    // Hide the panel itself
+    panel.style.setProperty('display', 'none', 'important');
+    panel.style.setProperty('visibility', 'hidden', 'important');
+    panel.style.setProperty('opacity', '0', 'important');
+    
+    // Only hide immediate parent if it's clearly a modal container
+    const immediateParent = panel.parentElement;
+    if (immediateParent && this.isModalContainer(immediateParent)) {
+      console.log('tradosClarity: Hiding immediate modal parent:', immediateParent.id || immediateParent.className);
+      immediateParent.style.setProperty('display', 'none', 'important');
+      immediateParent.style.setProperty('visibility', 'hidden', 'important');
     }
 
-    // Click outside as last resort
+    // Step 6: Remove backdrop/mask if present (but be very selective)
+    const masks = document.querySelectorAll('.x-mask');
+    masks.forEach(mask => {
+      // Only remove masks that are clearly related to this panel
+      if (mask.style.zIndex && parseInt(mask.style.zIndex) > 1000) {
+        const maskRect = mask.getBoundingClientRect();
+        
+        // Only hide if the mask seems to be for this specific modal
+        if (maskRect.width > 0 && maskRect.height > 0) {
+          console.log('tradosClarity: Removing modal mask');
+          mask.style.setProperty('display', 'none', 'important');
+        }
+      }
+    });
+
+    // Step 7: Click outside as final fallback (much more conservative)
     setTimeout(() => {
-      console.log('tradosClarity: Clicking outside to close panel');
-      const outsideClick = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        clientX: 0,
-        clientY: 0
-      });
-      document.body.dispatchEvent(outsideClick);
-    }, 100);
+      // Only if the panel is still visible, try clicking outside
+      if (this.isVisible(panel)) {
+        console.log('tradosClarity: Panel still visible, trying outside click');
+        const outsideClick = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          clientX: 10, // Click near top-left, away from any modals
+          clientY: 10
+        });
+        
+        // Click on a safe element like the main content area
+        const mainContent = document.querySelector('#main-content, [role="main"], main') || document.body;
+        mainContent.dispatchEvent(outsideClick);
+      }
+    }, 50);
+
+    // Step 8: Provide meaningful feedback about where focus has moved
+    setTimeout(() => {
+      if (targetFocusElement && document.activeElement === targetFocusElement) {
+        let focusMessage = 'Import History panel closed.';
+        
+        // Provide context about where focus moved
+        if (targetFocusElement.textContent && targetFocusElement.textContent.trim()) {
+          const elementText = targetFocusElement.textContent.trim();
+          const elementType = targetFocusElement.tagName.toLowerCase();
+          
+          if (elementType.match(/^h[1-6]$/)) {
+            focusMessage += ` Focus moved to heading: "${elementText}".`;
+          } else if (targetFocusElement.matches('button, [role="button"]')) {
+            focusMessage += ` Focus returned to "${elementText}" button.`;
+          } else if (elementText.length < 50) {
+            focusMessage += ` Focus moved to: "${elementText}".`;
+          } else {
+            focusMessage += ` Focus moved to main content area.`;
+          }
+        } else {
+          focusMessage += ` Focus moved to main content area.`;
+        }
+        
+        // Add helpful navigation hint
+        focusMessage += ' Use Tab to navigate or Alt+Shift+A to find important action buttons.';
+        
+        this.announce(focusMessage);
+      }
+    }, 200);
+
+    console.log('tradosClarity: Import History panel close completed');
   }
 
-  ensureId(element, prefix) {
-    if (!element.id) {
-      element.id = prefix + '-' + Math.random().toString(36).substr(2, 9);
-    }
-    return element.id;
+  // Helper method to identify modal containers
+  isModalContainer(element) {
+    if (!element) return false;
+    
+    const className = String(element.className || '');
+    const id = String(element.id || '');
+    
+    // Check for ExtJS modal/window patterns
+    return className.includes('x-window') ||
+           className.includes('x-modal') || 
+           className.includes('x-panel-wrap') ||
+           id.includes('window') ||
+           id.includes('modal') ||
+           // But specifically exclude the main body and viewport
+           (!className.includes('x-body') && 
+            !className.includes('x-viewport') && 
+            !id.includes('ext-element-1'));
   }
 
   handleEscapeKey(e) {
     console.log('tradosClarity: Escape key pressed');
     
-    // Look for any visible menus or dropdowns
+    // Check if we have an active Import History panel to close
+    const importPanels = document.querySelectorAll(`
+      [id*="import-history"][data-trados-enhanced],
+      [id*="tm-import-history"][data-trados-enhanced],
+      .import-history-grid[data-trados-enhanced]
+    `);
+    
+    let closedImportPanel = false;
+    for (const panel of importPanels) {
+      if (this.isVisible(panel)) {
+        console.log('tradosClarity: Closing Import History panel with escape');
+        this.forceCloseImportPanel(panel);
+        closedImportPanel = true;
+        e.preventDefault();
+        e.stopPropagation();
+        break; // Only close one panel at a time
+      }
+    }
+    
+    if (closedImportPanel) {
+      return;
+    }
+    
+    // Look for other visible menus or dropdowns (but be much more conservative)
     const visibleMenus = document.querySelectorAll(`
       .x-menu:not([style*="display: none"]):not([style*="visibility: hidden"]),
       .x-boundlist:not([style*="display: none"]):not([style*="visibility: hidden"]),
-      .x-panel:not([style*="display: none"]):not([style*="visibility: hidden"]),
       [role="menu"]:not([style*="display: none"]):not([style*="visibility: hidden"]),
       [role="listbox"]:not([style*="display: none"]):not([style*="visibility: hidden"]),
       .dropdown-menu:not([style*="display: none"]):not([style*="visibility: hidden"])
     `);
 
-    let closedAny = false;
+    let closedMenus = false;
     
     visibleMenus.forEach(menu => {
-      if (this.isVisible(menu)) {
-        console.log('tradosClarity: Closing menu:', menu);
+      // Skip if this is part of the main navigation or essential UI
+      if (this.isEssentialUIElement(menu)) {
+        return;
+      }
+      
+      if (this.isVisible(menu) && this.appearsToBeDropdown(menu)) {
+        console.log('tradosClarity: Closing dropdown menu:', menu.id || menu.className);
         this.forceCloseMenu(menu);
-        closedAny = true;
+        closedMenus = true;
       }
     });
 
-    if (closedAny) {
+    if (closedMenus) {
       e.preventDefault();
       e.stopPropagation();
-      console.log('tradosClarity: Menus closed with Escape');
+      console.log('tradosClarity: Dropdown menus closed with Escape');
     }
   }
 
-  forceCloseMenu(menu) {
-    // Try multiple approaches to close ExtJS menus
+  // Helper method to identify essential UI elements that shouldn't be closed
+  isEssentialUIElement(element) {
+    if (!element) return false;
     
-    // Method 1: Look for close button or tool
+    const className = String(element.className || '');
+    const id = String(element.id || '');
+    const parent = element.parentElement;
+    
+    // Skip main navigation, toolbars, and essential UI
+    if (className.includes('x-toolbar') ||
+        className.includes('x-panel-header') ||
+        className.includes('navigation') ||
+        className.includes('navbar') ||
+        id.includes('toolbar') ||
+        id.includes('nav')) {
+      return true;
+    }
+    
+    // Check if this is part of the main UI structure
+    if (parent) {
+      const parentClass = String(parent.className || '');
+      if (parentClass.includes('x-viewport') ||
+          parentClass.includes('x-body') ||
+          parentClass.includes('main-content')) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  // Helper method to determine if an element appears to be a dropdown
+  appearsToBeDropdown(element) {
+    if (!element) return false;
+    
+    const rect = element.getBoundingClientRect();
+    const className = String(element.className || '');
+    
+    // Must be visible and have reasonable dropdown dimensions
+    if (rect.width === 0 || rect.height === 0 || rect.width > window.innerWidth || rect.height > window.innerHeight * 0.8) {
+      return false;
+    }
+    
+    // Must have dropdown-like characteristics
+    return className.includes('x-menu') ||
+           className.includes('dropdown') ||
+           className.includes('x-boundlist') ||
+           element.getAttribute('role') === 'menu' ||
+           element.getAttribute('role') === 'listbox';
+  }
+
+  forceCloseMenu(menu) {
+    // Don't close essential UI elements
+    if (this.isEssentialUIElement(menu)) {
+      return;
+    }
+    
+    console.log('tradosClarity: Closing menu:', menu.id || menu.className);
+    
+    // Method 1: Look for close button or tool within the menu
     const closeBtn = menu.querySelector('.x-tool-close, .x-btn-close, [aria-label*="close"]');
-    if (closeBtn) {
+    if (closeBtn && this.isVisible(closeBtn)) {
       closeBtn.click();
       return;
     }
 
-    // Method 2: Hide the menu
-    menu.style.display = 'none';
-    menu.style.visibility = 'hidden';
+    // Method 2: Hide only this specific menu
+    menu.style.setProperty('display', 'none', 'important');
+    menu.style.setProperty('visibility', 'hidden', 'important');
+    menu.style.setProperty('opacity', '0', 'important');
     
-    // Method 3: Try to remove if it's a floating menu
+    // Method 3: If it's a floating menu, try to remove it safely
     const style = window.getComputedStyle(menu);
-    if (style.position === 'absolute' || style.position === 'fixed') {
+    if ((style.position === 'absolute' || style.position === 'fixed') && 
+        menu.parentElement && 
+        !this.isEssentialUIElement(menu.parentElement)) {
+      
       try {
-        menu.remove();
+        // Only remove if it's clearly a temporary dropdown
+        const rect = menu.getBoundingClientRect();
+        if (rect.width < window.innerWidth * 0.5 && rect.height < window.innerHeight * 0.5) {
+          menu.remove();
+        }
       } catch (e) {
-        // Ignore errors
+        console.log('tradosClarity: Could not remove menu element safely');
       }
     }
 
-    // Method 4: Click outside to close
+    // Method 4: Click outside as last resort, but very conservatively
     setTimeout(() => {
-      const outsideClick = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        clientX: 0,
-        clientY: 0
-      });
-      document.body.dispatchEvent(outsideClick);
+      if (this.isVisible(menu)) {
+        const outsideClick = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          clientX: 50, // Click in a safe area
+          clientY: 50
+        });
+        
+        // Click on the main content area, not the body
+        const mainContent = document.querySelector('#main-content, [role="main"], .x-panel-body') || document.documentElement;
+        if (mainContent && mainContent !== menu && !menu.contains(mainContent)) {
+          mainContent.dispatchEvent(outsideClick);
+        }
+      }
     }, 10);
   }
 
@@ -1114,20 +1316,11 @@ class ActionButtonManager {
     }
   }
 
-  closeAnyVisibleDropdowns() {
-    const dropdowns = document.querySelectorAll('.x-menu, .dropdown-menu, [role="menu"], .x-boundlist');
-    let closedAny = false;
-    
-    dropdowns.forEach(dropdown => {
-      if (this.isVisible(dropdown)) {
-        this.closeDropdown(dropdown);
-        closedAny = true;
-      }
-    });
-
-    if (closedAny) {
-      console.log('tradosClarity: Closed dropdowns with Escape');
+  ensureId(element, prefix) {
+    if (!element.id) {
+      element.id = prefix + '-' + Math.random().toString(36).substr(2, 9);
     }
+    return element.id;
   }
 
   focus() {
@@ -1318,4 +1511,5 @@ class NotificationHelper {
 }
 
 // Initialize the extension
+console.log('tradosClarity: Initializing...');
 new TradosClarity();
