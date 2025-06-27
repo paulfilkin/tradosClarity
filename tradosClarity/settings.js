@@ -9,12 +9,16 @@ class SettingsManager {
     this.init();
   }
 
-  getDefaultShortcuts() {
-    return {
-      focusActionButton: { key: 'a', alt: true, shift: true, ctrl: false },
-      restartTours: { key: 'r', alt: true, shift: true, ctrl: false }
-    };
-  }
+getDefaultShortcuts() {
+  return {
+    focusActionButton: { key: 'a', alt: true, shift: true, ctrl: false },
+    restartTours: { key: 'r', alt: true, shift: true, ctrl: false },
+    quickNavigation: { key: 'n', alt: true, shift: true, ctrl: false },
+    navigateToMain: { key: 'm', alt: true, shift: true, ctrl: false },
+    navigateToSub: { key: 's', alt: true, shift: true, ctrl: false },
+    navigateToTable: { key: 't', alt: true, shift: true, ctrl: false }
+  };
+}
 
   async init() {
     await this.loadShortcuts();
@@ -482,3 +486,4 @@ if (document.readyState === 'loading') {
 } else {
   new SettingsManager();
 }
+    
