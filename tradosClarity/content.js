@@ -6,15 +6,20 @@ class TradosClarity {
     this.shortcuts = this.getDefaultShortcuts();
     this.tour = new TourManager();
     this.action = new ActionButtonManager();
+    this.navigation = new NavigationManager(); // Add this line
     this.init();
   }
 
-  getDefaultShortcuts() {
-    return {
-      focusActionButton: { key: 'a', alt: true, shift: true, ctrl: false },
-      restartTours: { key: 'r', alt: true, shift: true, ctrl: false }
-    };
-  }
+getDefaultShortcuts() {
+  return {
+    focusActionButton: { key: 'a', alt: true, shift: true, ctrl: false },
+    restartTours: { key: 'r', alt: true, shift: true, ctrl: false },
+    quickNavigation: { key: 'n', alt: true, shift: true, ctrl: false },
+    navigateToMain: { key: 'm', alt: true, shift: true, ctrl: false },
+    navigateToSub: { key: 's', alt: true, shift: true, ctrl: false },
+    navigateToTable: { key: 't', alt: true, shift: true, ctrl: false }
+  };
+}
 
   async init() {
     await this.loadShortcuts();
@@ -50,32 +55,97 @@ class TradosClarity {
     });
   }
 
-  handleAction(action) {
-    switch (action) {
-      case 'focusActionButton':
-        this.action.focus();
-        break;
-      case 'restartTours':
-        this.tour.restart();
-        break;
+handleAction(action) {
+  switch (action) {
+    case 'focusActionButton':
+      this.action.focus();
+      break;
+    case 'restartTours':
+      this.tour.restart();
+      break;
+    case 'quickNavigation':
+      this.navigation.showNavigationOverlay();
+      break;
+    case 'navigateToMain':
+      this.navigation.navigateToLandmark('mainMenu');
+      break;
+    case 'navigateToSub':
+      this.navigation.navigateToLandmark('subMenu');
+      break;
+    case 'navigateToTable':
+      this.navigation.navigateToLandmark('contentArea');
+      break;
+  }
+}
+
+/* setupKeyboardHandlers() {
+  document.addEventListener('keydown', (e) => {
+    if (this.tour.isActive() && this.tour.handleKeydown(e)) {
+      return;
     }
-  }
 
-  setupKeyboardHandlers() {
-    document.addEventListener('keydown', (e) => {
-      if (this.tour.isActive() && this.tour.handleKeydown(e)) {
-        return;
-      }
+    if (this.matchesShortcut(e, this.shortcuts.focusActionButton)) {
+      e.preventDefault();
+      this.action.focus();
+    } else if (this.matchesShortcut(e, this.shortcuts.restartTours)) {
+      e.preventDefault();
+      this.tour.restart();
+    } else if (this.matchesShortcut(e, this.shortcuts.quickNavigation)) {
+      e.preventDefault();
+      this.navigation.showNavigationOverlay();
+    } else if (this.matchesShortcut(e, this.shortcuts.navigateToMain)) {
+      e.preventDefault();
+      this.navigation.navigateToLandmark('mainMenu');
+    } else if (this.matchesShortcut(e, this.shortcuts.navigateToSub)) {
+      e.preventDefault();
+      this.navigation.navigateToLandmark('subMenu');
+    } else if (this.matchesShortcut(e, this.shortcuts.navigateToTable)) {
+      e.preventDefault();
+      this.navigation.navigateToLandmark('contentArea');
+    }
+  });
+} */
 
-      if (this.matchesShortcut(e, this.shortcuts.focusActionButton)) {
-        e.preventDefault();
-        this.action.focus();
-      } else if (this.matchesShortcut(e, this.shortcuts.restartTours)) {
-        e.preventDefault();
-        this.tour.restart();
-      }
-    });
-  }
+setupKeyboardHandlers() {
+  document.addEventListener('keydown', (e) => {
+    // TEMPORARY DEBUG - remove this after testing
+    if (e.altKey && e.shiftKey) {
+      console.log('Alt+Shift+' + e.key + ' detected, checking shortcuts...');
+      console.log('Available shortcuts:', this.shortcuts);
+      console.log('Navigation manager exists:', !!this.navigation);
+    }
+    
+    if (this.tour.isActive() && this.tour.handleKeydown(e)) {
+      return;
+    }
+
+    if (this.matchesShortcut(e, this.shortcuts.focusActionButton)) {
+      e.preventDefault();
+      console.log('Focus action button triggered!'); // TEMPORARY DEBUG
+      this.action.focus();
+    } else if (this.matchesShortcut(e, this.shortcuts.restartTours)) {
+      e.preventDefault();
+      console.log('Restart tours triggered!'); // TEMPORARY DEBUG
+      this.tour.restart();
+    } else if (this.matchesShortcut(e, this.shortcuts.quickNavigation)) {
+      e.preventDefault();
+      console.log('Quick navigation triggered!'); // TEMPORARY DEBUG
+      this.navigation.showNavigationOverlay();
+    } else if (this.matchesShortcut(e, this.shortcuts.navigateToMain)) {
+      e.preventDefault();
+      console.log('Navigate to main triggered!'); // TEMPORARY DEBUG
+      this.navigation.navigateToLandmark('mainMenu');
+    } else if (this.matchesShortcut(e, this.shortcuts.navigateToSub)) {
+      e.preventDefault();
+      console.log('Navigate to sub triggered!'); // TEMPORARY DEBUG
+      this.navigation.navigateToLandmark('subMenu');
+    } else if (this.matchesShortcut(e, this.shortcuts.navigateToTable)) {
+      e.preventDefault();
+      console.log('Navigate to table triggered!'); // TEMPORARY DEBUG
+      this.navigation.navigateToLandmark('contentArea');
+    }
+  });
+}
 
   matchesShortcut(event, shortcut) {
     return event.key.toLowerCase() === shortcut.key.toLowerCase() &&
@@ -1507,6 +1577,567 @@ class NotificationHelper {
       warning: '#ffc107'
     };
     return colors[type] || colors.info;
+  }
+}
+
+// =============================================================================
+// ENHANCED NAVIGATION MANAGEMENT
+// =============================================================================
+
+class NavigationManager {
+  constructor() {
+    this.landmarks = new Map();
+    this.navigationOverlay = null;
+    this.currentFocus = null;
+    this.init();
+  }
+
+  init() {
+    this.identifyNavigationLandmarks();
+    this.enhanceExistingLandmarks();
+    this.setupNavigationOverlay();
+    this.observePageChanges();
+    console.log('tradosClarity: Navigation Manager initialized with', this.landmarks.size, 'landmarks');
+  }
+
+  identifyNavigationLandmarks() {
+    // Define navigation areas based on confirmed Trados Cloud patterns
+    const landmarkSelectors = {
+      mainMenu: {
+        selectors: [
+          '.sdl-navbar',
+          '#navbar-1209',
+          '.x-toolbar.sdl-navbar'
+        ],
+        label: 'Main Navigation Menu',
+        shortcut: 'M',
+        description: 'Navigate to main menu (Dashboard, Inbox, Projects, Resources, etc.)',
+        role: 'navigation'
+      },
+      
+      subMenu: {
+        selectors: [
+          '[role="tablist"]',
+          '.x-tab-bar[role="tablist"]',
+          '.x-tab-bar-body'
+        ],
+        label: 'Section Navigation',
+        shortcut: 'S', 
+        description: 'Navigate to section tabs (Dashboard, Stages, Workflow, Files, etc.)',
+        role: 'navigation',
+        optional: true // Not present on all pages (e.g., Customers)
+      },
+      
+      actionToolbar: {
+        selectors: [
+          '.x-toolbar.x-docked:not(.sdl-navbar)',
+          '.x-toolbar[role="group"]:not(.sdl-navbar)',
+          '.x-toolbar[role="toolbar"]:not(.sdl-navbar)'
+        ],
+        label: 'Action Buttons',
+        shortcut: 'A',
+        description: 'Navigate to action buttons (Refresh, Upload, Download, Open Editor, etc.)',
+        role: 'toolbar'
+      },
+      
+      contentArea: {
+        selectors: [
+          '.x-grid',
+          '.x-panel-body:has(.x-grid)',
+          '.x-tree-panel',
+          '.x-panel-body .x-grid'
+        ],
+        label: 'Content Table',
+        shortcut: 'T',
+        description: 'Navigate to main content table with files, projects, or data',
+        role: 'main'
+      }
+    };
+
+    // Find and register each landmark
+    Object.entries(landmarkSelectors).forEach(([key, config]) => {
+      const element = this.findBestMatch(config.selectors);
+      if (element) {
+        this.landmarks.set(key, {
+          element,
+          ...config
+        });
+        console.log(`tradosClarity: Found ${config.label}:`, element);
+      } else if (!config.optional) {
+        console.log(`tradosClarity: Warning - Required landmark '${config.label}' not found`);
+      }
+    });
+  }
+
+  findBestMatch(selectors) {
+    for (const selector of selectors) {
+      try {
+        const elements = document.querySelectorAll(selector);
+        // Return the most visible and interactive element
+        for (const element of elements) {
+          if (this.isVisible(element) && this.isUsefulLandmark(element)) {
+            return element;
+          }
+        }
+      } catch (e) {
+        console.log('tradosClarity: Invalid selector:', selector);
+      }
+    }
+    return null;
+  }
+
+  isVisible(element) {
+    if (!element) return false;
+    const style = window.getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== 'none' && 
+           style.visibility !== 'hidden' && 
+           element.offsetParent !== null &&
+           rect.width > 0 && 
+           rect.height > 0;
+  }
+
+  isUsefulLandmark(element) {
+    // Check if element contains interactive content or meaningful structure
+    const interactiveElements = element.querySelectorAll(`
+      button, a[href], input, select, textarea, 
+      [role="button"], [role="menuitem"], [role="tab"],
+      [tabindex]:not([tabindex="-1"]), .x-btn, .x-grid-cell
+    `);
+    
+    // Also check for meaningful text content
+    const hasContent = element.textContent && element.textContent.trim().length > 5;
+    
+    return interactiveElements.length > 0 || hasContent;
+  }
+
+  enhanceExistingLandmarks() {
+    this.landmarks.forEach((landmark, key) => {
+      this.enhanceLandmark(landmark.element, landmark, key);
+    });
+  }
+
+  enhanceLandmark(element, config, landmarkKey) {
+    if (element.hasAttribute('data-trados-nav-enhanced')) return;
+    
+    element.setAttribute('data-trados-nav-enhanced', 'true');
+    element.setAttribute('data-trados-landmark', landmarkKey);
+    
+    // Add proper landmark roles if not already present
+    if (!element.getAttribute('role') && config.role) {
+      element.setAttribute('role', config.role);
+    }
+    
+    // Add accessible labels
+    if (!element.getAttribute('aria-label')) {
+      element.setAttribute('aria-label', config.label);
+    }
+    
+    // Make focusable for programmatic navigation
+    if (!element.hasAttribute('tabindex')) {
+      element.setAttribute('tabindex', '-1');
+    }
+    
+    // Enhance the first focusable element within the landmark
+    const firstFocusable = this.findFirstFocusableElement(element);
+    if (firstFocusable && !firstFocusable.hasAttribute('data-trados-enhanced')) {
+      firstFocusable.setAttribute('data-trados-enhanced', 'true');
+      
+      // Add navigation hint for screen readers
+      this.ensureNavigationHint();
+      firstFocusable.setAttribute('aria-describedby', 'trados-nav-hint');
+    }
+  }
+
+  ensureNavigationHint() {
+    if (!document.getElementById('trados-nav-hint')) {
+      const hint = document.createElement('div');
+      hint.id = 'trados-nav-hint';
+      hint.className = 'trados-live-region';
+      hint.style.cssText = 'position: absolute !important; left: -10000px !important; width: 1px !important; height: 1px !important; overflow: hidden !important;';
+      hint.textContent = 'Press Alt+Shift+N for quick navigation options between main sections';
+      document.body.appendChild(hint);
+    }
+  }
+
+  findFirstFocusableElement(container) {
+    const focusableSelectors = `
+      button:not([disabled]):not([aria-hidden="true"]),
+      a[href]:not([disabled]):not([aria-hidden="true"]),
+      input:not([disabled]):not([aria-hidden="true"]),
+      select:not([disabled]):not([aria-hidden="true"]),
+      textarea:not([disabled]):not([aria-hidden="true"]),
+      [tabindex]:not([tabindex="-1"]):not([disabled]):not([aria-hidden="true"]),
+      [role="button"]:not([disabled]):not([aria-hidden="true"]),
+      [role="menuitem"]:not([disabled]):not([aria-hidden="true"]),
+      [role="tab"]:not([disabled]):not([aria-hidden="true"]),
+      .x-btn:not([disabled]):not([aria-hidden="true"])
+    `;
+    
+    const focusables = container.querySelectorAll(focusableSelectors);
+    for (const element of focusables) {
+      if (this.isVisible(element)) {
+        return element;
+      }
+    }
+    return container; // Fallback to the landmark itself
+  }
+
+  setupNavigationOverlay() {
+    this.createNavigationOverlay();
+  }
+
+  createNavigationOverlay() {
+    // Create overlay container
+    const overlayContainer = document.createElement('div');
+    overlayContainer.id = 'trados-nav-container';
+    
+    // Create shadow DOM to isolate our styles
+    const shadowRoot = overlayContainer.attachShadow({ mode: 'open' });
+    
+    // Add our isolated styles and content
+    shadowRoot.innerHTML = `
+      <style>
+        .overlay {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: white;
+          border: 3px solid #2d5a5a;
+          border-radius: 12px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+          z-index: 999999;
+          padding: 24px;
+          min-width: 500px;
+          max-width: 90vw;
+          max-height: 90vh;
+          overflow-y: auto;
+          font-family: system-ui, -apple-system, sans-serif;
+          font-size: 14px;
+          line-height: 1.4;
+          color: #333;
+          display: none;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        
+        .overlay[data-visible="true"] {
+          display: block;
+          opacity: 1;
+        }
+        
+        .title {
+          margin: 0 0 8px 0;
+          font-size: 20px;
+          color: #2d5a5a;
+          font-weight: 600;
+        }
+        
+        .subtitle {
+          margin: 0 0 20px 0;
+          color: #666;
+          font-size: 14px;
+        }
+        
+        .nav-item {
+          margin: 0 0 12px 0;
+          padding: 16px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border: 2px solid #e9ecef;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+        }
+        
+        .nav-item:hover {
+          background: #e9ecef;
+          border-color: #2d5a5a;
+        }
+        
+        .nav-key {
+          background: #2d5a5a;
+          color: white;
+          padding: 6px 10px;
+          border-radius: 4px;
+          font-family: monospace;
+          font-size: 14px;
+          font-weight: bold;
+          min-width: 30px;
+          text-align: center;
+          flex-shrink: 0;
+        }
+        
+        .nav-content {
+          flex: 1;
+        }
+        
+        .nav-title {
+          font-weight: 600;
+          font-size: 16px;
+          color: #333;
+          margin-bottom: 4px;
+        }
+        
+        .nav-desc {
+          color: #666;
+          font-size: 13px;
+        }
+        
+        .instructions {
+          margin: 0;
+          color: #666;
+          font-size: 12px;
+          text-align: center;
+          border-top: 1px solid #e9ecef;
+          padding-top: 16px;
+          line-height: 1.4;
+        }
+      </style>
+      
+      <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="nav-title" tabindex="0">
+        <h2 class="title" id="nav-title">Quick Navigation</h2>
+        <p class="subtitle">Press the highlighted key to jump directly to that section:</p>
+        <div id="nav-list"></div>
+        <p class="instructions">
+          <strong>Keyboard shortcuts:</strong> Alt+Shift+N (this dialog) • Alt+Shift+M (main menu) • Alt+Shift+S (sub-tabs) • Alt+Shift+A (actions) • Alt+Shift+T (table)<br>
+          Press <strong>Escape</strong> to close this dialog
+        </p>
+      </div>
+    `;
+
+    const overlay = shadowRoot.querySelector('#overlay');
+    const navList = shadowRoot.querySelector('#nav-list');
+
+    // Add navigation options for available landmarks
+    this.landmarks.forEach((landmark, key) => {
+      const item = document.createElement('div');
+      item.className = 'nav-item';
+      item.innerHTML = `
+        <div class="nav-key">${landmark.shortcut}</div>
+        <div class="nav-content">
+          <div class="nav-title">${landmark.label}</div>
+          <div class="nav-desc">${landmark.description}</div>
+        </div>
+      `;
+      
+      item.addEventListener('click', () => this.navigateToLandmark(key));
+      navList.appendChild(item);
+    });
+
+    document.body.appendChild(overlayContainer);
+    this.navigationOverlay = overlay;
+    this.overlayContainer = overlayContainer;
+
+    // Setup keyboard handlers for the overlay itself, not the container
+    overlay.addEventListener('keydown', (e) => this.handleOverlayKeydown(e));
+  }
+
+  handleOverlayKeydown(e) {
+    console.log('Overlay keydown:', e.key); // Debug log
+    
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Escape pressed, hiding overlay'); // Debug log
+      this.hideNavigationOverlay();
+      return;
+    }
+
+    // Check for direct navigation shortcuts
+    const key = e.key.toLowerCase();
+    this.landmarks.forEach((landmark, landmarkKey) => {
+      if (landmark.shortcut.toLowerCase() === key) {
+        e.preventDefault();
+        this.navigateToLandmark(landmarkKey);
+        this.hideNavigationOverlay();
+      }
+    });
+  }
+
+  showNavigationOverlay() {
+    console.log('showNavigationOverlay called');
+    
+    if (!this.navigationOverlay) {
+      console.log('No navigation overlay found!');
+      return;
+    }
+    
+    // Refresh the navigation items each time we show the overlay
+    this.updateNavigationItems();
+    
+    this.currentFocus = document.activeElement;
+    
+    // Directly set the display and opacity styles
+    this.navigationOverlay.style.display = 'block';
+    this.navigationOverlay.style.opacity = '1';
+    this.navigationOverlay.setAttribute('data-visible', 'true');
+    
+    console.log('Overlay should now be visible');
+    
+    // Focus the actual overlay element inside the shadow DOM, not the container
+    setTimeout(() => {
+      this.navigationOverlay.focus();
+      console.log('Focused the overlay element');
+    }, 100);
+
+    this.announce(`Quick navigation dialog opened. ${this.landmarks.size} sections available. Use shortcut keys to navigate or press Escape to close.`);
+  }
+
+  hideNavigationOverlay() {
+    if (!this.navigationOverlay) return;
+    
+    // Directly set the styles to hide
+    this.navigationOverlay.style.display = 'none';
+    this.navigationOverlay.style.opacity = '0';
+    this.navigationOverlay.setAttribute('data-visible', 'false');
+    
+    if (this.currentFocus && document.body.contains(this.currentFocus)) {
+      this.currentFocus.focus();
+    }
+  }
+
+  updateNavigationItems() {
+    const navList = this.overlayContainer.shadowRoot.querySelector('#nav-list');
+    navList.innerHTML = ''; // Clear existing items
+    
+    console.log('Updating navigation items, landmarks:', this.landmarks.size);
+    
+    // Add navigation options for available landmarks
+    this.landmarks.forEach((landmark, key) => {
+      console.log('Adding navigation item for:', landmark.label);
+      
+      const item = document.createElement('div');
+      item.className = 'nav-item';
+      item.innerHTML = `
+        <div class="nav-key">${landmark.shortcut}</div>
+        <div class="nav-content">
+          <div class="nav-title">${landmark.label}</div>
+          <div class="nav-desc">${landmark.description}</div>
+        </div>
+      `;
+      
+      item.addEventListener('click', () => this.navigateToLandmark(key));
+      navList.appendChild(item);
+    });
+  }
+
+  navigateToLandmark(landmarkKey) {
+    const landmark = this.landmarks.get(landmarkKey);
+    if (!landmark || !landmark.element) {
+      this.announce(`${landmark?.label || 'Section'} not found on this page.`);
+      return;
+    }
+
+    // Find the best element to focus within the landmark
+    const targetElement = this.findFirstFocusableElement(landmark.element);
+    
+    // Scroll into view
+    targetElement.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'center',
+      inline: 'nearest'
+    });
+
+    // Focus after scroll with enhanced feedback
+    setTimeout(() => {
+      targetElement.focus();
+      
+      // Count interactive elements for context
+      const interactiveCount = landmark.element.querySelectorAll(`
+        button:not([disabled]), a[href]:not([disabled]), 
+        input:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled]),
+        .x-btn:not([disabled]), [role="tab"]:not([disabled])
+      `).length;
+      
+      // Enhanced announcement with context
+      let announcement = `Navigated to ${landmark.label}.`;
+      
+      if (interactiveCount > 0) {
+        announcement += ` Contains ${interactiveCount} interactive element${interactiveCount !== 1 ? 's' : ''}.`;
+      }
+      
+      if (landmarkKey === 'contentArea') {
+        // Special handling for data grids
+        const rows = landmark.element.querySelectorAll('.x-grid-row, tr');
+        if (rows.length > 0) {
+          announcement += ` Table has ${rows.length} row${rows.length !== 1 ? 's' : ''}.`;
+        }
+      }
+      
+      announcement += ' Use Tab to navigate within this section, or Alt+Shift+N for quick navigation.';
+      
+      this.announce(announcement);
+    }, 500);
+  }
+
+  observePageChanges() {
+    // Re-scan for landmarks when page content changes significantly
+    const observer = new MutationObserver((mutations) => {
+      let shouldRescan = false;
+      
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              // Check for significant structural changes
+              if (node.classList && (
+                  node.classList.contains('x-toolbar') || 
+                  node.classList.contains('x-grid') ||
+                  node.classList.contains('x-tab-bar') ||
+                  node.querySelector('.x-toolbar, .x-grid, .x-tab-bar')
+                )) {
+                shouldRescan = true;
+              }
+            }
+          });
+        }
+      });
+      
+      if (shouldRescan) {
+        console.log('tradosClarity: Significant page structure change detected, rescanning landmarks...');
+        setTimeout(() => {
+          this.landmarks.clear();
+          this.identifyNavigationLandmarks();
+          this.enhanceExistingLandmarks();
+          console.log('tradosClarity: Landmarks rescanned, found', this.landmarks.size, 'sections');
+        }, 1000); // Allow time for page to stabilize
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  announce(message) {
+    const announcer = document.createElement('div');
+    announcer.setAttribute('aria-live', 'assertive');
+    announcer.setAttribute('aria-atomic', 'true');
+    announcer.className = 'trados-live-region';
+    announcer.style.cssText = 'position: absolute !important; left: -10000px !important; width: 1px !important; height: 1px !important; overflow: hidden !important;';
+    announcer.textContent = message;
+    document.body.appendChild(announcer);
+
+    setTimeout(() => {
+      if (announcer.parentNode) {
+        announcer.parentNode.removeChild(announcer);
+      }
+    }, 3000);
+  }
+
+  // Public method for external access
+  getAvailableLandmarks() {
+    return Array.from(this.landmarks.entries()).map(([key, landmark]) => ({
+      key,
+      label: landmark.label,
+      shortcut: landmark.shortcut,
+      available: this.isVisible(landmark.element)
+    }));
   }
 }
 
