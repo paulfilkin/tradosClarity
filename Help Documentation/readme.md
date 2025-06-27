@@ -11,6 +11,7 @@ Welcome to tradosClarity - your accessibility companion for Trados Cloud! This e
 
 tradosClarity is a free browser extension that enhances the accessibility of Trados Cloud by:
 
+- **Quick Navigation**: Jump instantly between main interface sections with keyboard shortcuts
 - Making product tours fully accessible with proper announcements and keyboard navigation
 - Helping you quickly find and focus important action buttons
 - Allowing you to restart tours that may have gotten stuck
@@ -24,6 +25,33 @@ tradosClarity is a free browser extension that enhances the accessibility of Tra
 4. **Access settings** by right-clicking the extension icon and selecting "Options"
 
 ## Features & Usage
+
+### 🧭 **Quick Navigation (NEW!)**
+
+The most powerful feature for efficient Trados Cloud navigation.
+
+**Navigation Dialog:**
+- **Default shortcut:** Alt+Shift+N
+- **What it does:** Opens a visual dialog showing all available navigation sections
+- **How to use:** Press Alt+Shift+N, then press the highlighted key (M, S, A, T) to jump to that section
+
+**Direct Navigation Shortcuts:**
+- **Alt+Shift+M** → Jump to **Main Menu** (Dashboard, Inbox, Projects, Resources, etc.)
+- **Alt+Shift+S** → Jump to **Section Tabs** (Files, Workflow, Reports, etc.)
+- **Alt+Shift+A** → Jump to **Action Buttons** (Upload, Download, Open Editor, etc.)  
+- **Alt+Shift+T** → Jump to **Content Table** (Main file/project listing)
+
+**When it's helpful:**
+- **Save dozens of Tab presses** - jump directly where you need to go
+- **Never lose your place** - quickly move between interface sections
+- **Efficient workflow** - spend less time navigating, more time working
+- **Works on any Trados page** - Projects, Resources, Customers, etc.
+
+**Smart Features:**
+- Automatically detects available sections on each page
+- Adapts to different page layouts
+- Some pages may not have all sections (e.g., Customers has no sub-tabs)
+- Provides audio announcements about where you've navigated
 
 ### 🎯 Focus Important Action Buttons
 
@@ -114,15 +142,26 @@ tradosClarity is a free browser extension that enhances the accessibility of Tra
 
 ## Troubleshooting
 
-### Tours aren't announcing properly
+### Quick Navigation isn't working
 
 **Possible solutions:**
 
-- Ensure your screen reader is running and configured for dynamic content
-- Refresh the page to re-initialize the extension
+- Make sure the Trados page has focus (click on it first)
+- Verify you're on a supported Trados Cloud page (*.trados.com)
+- Try refreshing the page to re-initialize the extension
 - Check that the extension is enabled in Chrome's extension settings
 
-### Keyboard shortcuts aren't working
+### Navigation dialog shows but sections are missing
+
+**This is normal!** Different Trados pages have different sections:
+
+- **Projects page:** Has all 4 sections (Main Menu, Sub-tabs, Actions, Table)
+- **Customers page:** Has 3 sections (no sub-tabs)
+- **Some pages** may only have main menu and actions
+
+The extension automatically detects what's available on each page.
+
+### Navigation shortcuts aren't working
 
 **Possible solutions:**
 
@@ -130,6 +169,14 @@ tradosClarity is a free browser extension that enhances the accessibility of Tra
 - Check if another application is using the same shortcut
 - Try customizing the shortcut to a different key combination
 - Verify the extension is active on the current page
+
+### Tours aren't announcing properly
+
+**Possible solutions:**
+
+- Ensure your screen reader is running and configured for dynamic content
+- Refresh the page to re-initialize the extension
+- Check that the extension is enabled in Chrome's extension settings
 
 ### Important buttons aren't being found
 
@@ -148,6 +195,25 @@ tradosClarity is a free browser extension that enhances the accessibility of Tra
 - Check that the extension is enabled in chrome://extensions/
 - Try disabling and re-enabling the extension
 - Refresh the Trados Cloud page
+
+## Quick Reference Card
+
+### Navigation Shortcuts
+- **Alt+Shift+N** → Navigation dialog (shows all options)
+- **Alt+Shift+M** → Main menu
+- **Alt+Shift+S** → Section tabs  
+- **Alt+Shift+A** → Action buttons
+- **Alt+Shift+T** → Content table
+
+### Action Shortcuts
+- **Alt+Shift+A** → Focus important action button
+- **Alt+Shift+R** → Restart product tours
+
+### Tour Navigation
+- **Arrow Keys** → Navigate tour steps
+- **Escape** → Exit tour
+
+*All shortcuts can be customized in settings*
 
 ## Supported Sites
 
@@ -247,8 +313,14 @@ Your contributions help make Trados Cloud more accessible for everyone. Whether 
 
 **Q: Does this work offline?** A: The extension itself works offline, but you need an internet connection to access Trados Cloud.
 
+**Q: What's the difference between the navigation shortcuts and the action button shortcut?** A: Navigation shortcuts (M, S, T) help you move between different **sections** of the interface, while the action button shortcut (A) helps you find important **buttons** within those sections (like Accept Task, Complete Task).
+
+**Q: Why don't I see all navigation sections on every page?** A: Different Trados pages have different layouts. For example, the Customers page doesn't have sub-tabs, so the "S" shortcut won't find anything there. This is normal and expected.
+
+**Q: Can I change the keyboard shortcuts?** A: Yes! Right-click the extension icon, select "Options," go to the Keyboard Shortcuts tab, and customize any shortcut to your preference.
+
 ------
 
 **Version:** 1.0.0
- **Last Updated:** June 2025
- **Support:** https://github.com/paulfilkin/tradosClarity/issues
+**Last Updated:** June 2025
+**Support:** https://github.com/paulfilkin/tradosClarity/issues
