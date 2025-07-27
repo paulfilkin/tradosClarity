@@ -5,6 +5,8 @@
 </tr>
 </table>
 
+# tradosClarity - Developer Guide
+
 An Open Source project to build a browser extension that enhances the accessibility of Trados Cloud for screen reader users and keyboard navigation.
 
 ## About This Project
@@ -15,6 +17,7 @@ tradosClarity addresses critical accessibility barriers in Trados Cloud that pre
 - **Smart Action Button Focus**: Helps users quickly locate and focus important action buttons like "Accept Task" or "Complete Task"
 - **Tour Management**: Allows users to restart product tours because when they're done... they're done!
 - **Customizable Shortcuts**: Full keyboard shortcut customization with conflict detection and user preferences
+- **Language Pairs Management**: Enables accessible language selection in translation memory creation with proper focus management and keyboard navigation
 
 ## Target Audience
 
@@ -67,6 +70,10 @@ Once published to the Chrome Web Store, users will be able to:
    - Alt+Shift+R (Restart Tours)
 4. **Open extension popup** to verify UI components
 5. **Access settings page** via right-click → Options
+6. **Test language pairs** on translation memory creation pages:
+   - Navigate to create new translation memory
+   - Press Enter on empty language cells
+   - Type language codes (e.g., en-US, de-DE)
 
 ### Development Workflow
 
@@ -82,6 +89,7 @@ Once published to the Chrome Web Store, users will be able to:
 - **Content script**: Use browser DevTools console on Trados pages
 - **Popup/Settings**: Right-click extension → Inspect popup/options
 - **Background issues**: Check extension service worker in DevTools
+- **Language pairs**: Monitor console for focus management messages
 
 ## Key Development Considerations
 
@@ -99,12 +107,14 @@ Once published to the Chrome Web Store, users will be able to:
 - Test with **actual screen readers** when possible
 - Ensure **keyboard accessibility** for all interactive elements
 - Use **semantic HTML** and proper ARIA attributes
+- Provide **clear announcements** for all state changes
 
 #### Browser Compatibility
 
 - Primary target: **Chrome/Edge** (Manifest V3)
 - Consider **Firefox compatibility** (may require manifest conversion)
 - Test across different **screen reader/browser combinations**
+- Account for **ExtJS framework** behaviors in Trados Cloud
 
 #### Performance
 
@@ -112,6 +122,7 @@ Once published to the Chrome Web Store, users will be able to:
 - **Efficient selectors** - avoid broad queries
 - **Memory management** - clean up observers and listeners
 - **Fast initialization** - critical for tour detection
+- **Smart focus management** - prevent unnecessary focus changes
 
 #### Security
 
@@ -132,6 +143,7 @@ Once published to the Chrome Web Store, users will be able to:
 3. **Scan for tours** (initial + mutation observer)
 4. **Enhance accessibility** of detected elements
 5. **Set up keyboard handlers** for navigation and shortcuts
+6. **Monitor for language grids** and enhance when found
 
 ### Settings/Popup Communication
 
@@ -148,6 +160,18 @@ Once published to the Chrome Web Store, users will be able to:
 4. **Set up keyboard navigation** (arrows, escape)
 5. **Announce tour state** to screen readers
 
+### Language Pairs Enhancement Process
+
+1. **Detect language pairs grid** in translation memory creation
+2. **Enhance empty cells** with keyboard accessibility
+3. **Monitor for input fields** when cells are activated
+4. **Manage focus** to prevent loss during typing
+5. **Handle source/target fields** differently:
+   - Source: Simple focus retention
+   - Target: Aggressive selection prevention
+6. **Work with ExtJS dropdowns** while maintaining input focus
+7. **Announce selections** to screen readers
+
 ## Contributing
 
 When contributing to this project:
@@ -160,6 +184,7 @@ When contributing to this project:
 6. **Ensure Chrome Web Store compliance** - avoid practices that could impact store approval
 7. **Maintain privacy standards** - no data collection or external connections
 8. **Document permission usage** - justify any new permissions with clear accessibility benefits
+9. **Test with ExtJS components** - many Trados Cloud features use ExtJS framework
 
 ### Preparing for Chrome Web Store
 
@@ -183,7 +208,7 @@ The extension uses Manifest V3 with Chrome Web Store-compliant permissions:
 
 Each permission serves a specific accessibility purpose:
 
-- **activeTab**: Required to enhance tour accessibility and focus management on Trados pages
+- **activeTab**: Required to enhance tour accessibility, focus management, and language selection on Trados pages
 - **storage**: Essential for saving user's custom keyboard shortcuts and preferences
 - **host_permissions**: Scoped specifically to Trados Cloud domains for targeted functionality
 
@@ -194,6 +219,28 @@ Each permission serves a specific accessibility purpose:
 - **No network requests** - extension operates entirely offline
 - **Transparent functionality** - all code is open source and auditable
 
+## Feature Implementation Details
+
+### Language Pairs Management
+
+The Language Pairs Management feature addresses a critical accessibility issue where screen reader users cannot add languages to translation memories due to focus loss and text selection problems.
+
+**Technical approach:**
+- Detects language pairs grids using specific class names and IDs
+- Enhances empty cells with proper ARIA labels and keyboard navigation
+- Monitors for ExtJS combo box inputs when cells are activated
+- Implements different strategies for source vs target fields:
+  - **Source field**: Simple focus retention during typing
+  - **Target field**: Aggressive selection prevention to avoid character replacement
+- Works with ExtJS autocomplete while maintaining input focus
+- Provides clear announcements for all actions
+
+**Key challenges solved:**
+- Initial focus going to wrong field on page load
+- Focus loss when typing first character
+- Text selection replacing typed characters in target field
+- ExtJS dropdown stealing focus during autocomplete
+
 ## Support
 
 For development questions or technical issues:
@@ -201,5 +248,6 @@ For development questions or technical issues:
 - Review existing code patterns in the extension
 - Test changes thoroughly across different Trados Cloud workflows
 - Consider the diverse needs of screen reader users when making modifications
+- Pay special attention to ExtJS component behaviors
 
 This is an accessibility-focused project where user experience and inclusive design are the primary concerns.
