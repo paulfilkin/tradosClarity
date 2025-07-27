@@ -2164,28 +2164,41 @@ class LanguagePairsManager {
     }, true);
 
     // Monitor dropdown appearance and keep input focused
-    document.addEventListener('DOMNodeInserted', function(e) {
-      if (self.activeLanguageInput && e.target.nodeType === 1) {
-        // Check if a dropdown appeared
-        if (e.target.classList?.contains('x-boundlist') || 
-            e.target.querySelector?.('.x-boundlist')) {
-          
-          console.log('tradosClarity: Dropdown appeared, maintaining input focus');
-          
-          // Keep focus on input
-          setTimeout(() => {
-            if (self.activeLanguageInput && document.activeElement !== self.activeLanguageInput) {
-              self.activeLanguageInput.focus();
-              // For target field, ensure no selection
-              if (self.isTargetField) {
-                const len = self.activeLanguageInput.value.length;
-                self.activeLanguageInput.setSelectionRange(len, len);
+    const dropdownObserver = new MutationObserver((mutations) => {
+      if (self.activeLanguageInput) {
+        for (const mutation of mutations) {
+          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                // Check if a dropdown appeared
+                if (node.classList?.contains('x-boundlist') || 
+                    node.querySelector?.('.x-boundlist')) {
+                  
+                  console.log('tradosClarity: Dropdown appeared, maintaining input focus');
+                  
+                  // Keep focus on input
+                  setTimeout(() => {
+                    if (self.activeLanguageInput && document.activeElement !== self.activeLanguageInput) {
+                      self.activeLanguageInput.focus();
+                      // For target field, ensure no selection
+                      if (self.isTargetField) {
+                        const len = self.activeLanguageInput.value.length;
+                        self.activeLanguageInput.setSelectionRange(len, len);
+                      }
+                    }
+                  }, 0);
+                }
               }
-            }
-          }, 0);
+            });
+          }
         }
       }
-    }, true);
+    });
+
+    dropdownObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
 
     // Global selection prevention for target field
     document.addEventListener('selectstart', function(e) {
