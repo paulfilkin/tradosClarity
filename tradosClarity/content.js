@@ -6,7 +6,8 @@ class TradosClarity {
     this.shortcuts = this.getDefaultShortcuts();
     this.tour = new TourManager();
     this.action = new ActionButtonManager();
-    this.navigation = new NavigationManager(); // Add this line
+    this.navigation = new NavigationManager();
+    this.languagePairs = new LanguagePairsManager();
     this.init();
   }
 
@@ -27,6 +28,7 @@ getDefaultShortcuts() {
     this.setupKeyboardHandlers();
     this.tour.init();
     this.action.init();
+    this.languagePairs.init();
   }
 
   async loadShortcuts() {
@@ -78,70 +80,30 @@ handleAction(action) {
   }
 }
 
-/* setupKeyboardHandlers() {
-  document.addEventListener('keydown', (e) => {
-    if (this.tour.isActive() && this.tour.handleKeydown(e)) {
-      return;
-    }
-
-    if (this.matchesShortcut(e, this.shortcuts.focusActionButton)) {
-      e.preventDefault();
-      this.action.focus();
-    } else if (this.matchesShortcut(e, this.shortcuts.restartTours)) {
-      e.preventDefault();
-      this.tour.restart();
-    } else if (this.matchesShortcut(e, this.shortcuts.quickNavigation)) {
-      e.preventDefault();
-      this.navigation.showNavigationOverlay();
-    } else if (this.matchesShortcut(e, this.shortcuts.navigateToMain)) {
-      e.preventDefault();
-      this.navigation.navigateToLandmark('mainMenu');
-    } else if (this.matchesShortcut(e, this.shortcuts.navigateToSub)) {
-      e.preventDefault();
-      this.navigation.navigateToLandmark('subMenu');
-    } else if (this.matchesShortcut(e, this.shortcuts.navigateToTable)) {
-      e.preventDefault();
-      this.navigation.navigateToLandmark('contentArea');
-    }
-  });
-} */
 
 setupKeyboardHandlers() {
   document.addEventListener('keydown', (e) => {
-    // TEMPORARY DEBUG - remove this after testing
-    if (e.altKey && e.shiftKey) {
-      console.log('Alt+Shift+' + e.key + ' detected, checking shortcuts...');
-      console.log('Available shortcuts:', this.shortcuts);
-      console.log('Navigation manager exists:', !!this.navigation);
-    }
-    
     if (this.tour.isActive() && this.tour.handleKeydown(e)) {
       return;
     }
 
     if (this.matchesShortcut(e, this.shortcuts.focusActionButton)) {
       e.preventDefault();
-      console.log('Focus action button triggered!'); // TEMPORARY DEBUG
       this.action.focus();
     } else if (this.matchesShortcut(e, this.shortcuts.restartTours)) {
       e.preventDefault();
-      console.log('Restart tours triggered!'); // TEMPORARY DEBUG
       this.tour.restart();
     } else if (this.matchesShortcut(e, this.shortcuts.quickNavigation)) {
       e.preventDefault();
-      console.log('Quick navigation triggered!'); // TEMPORARY DEBUG
       this.navigation.showNavigationOverlay();
     } else if (this.matchesShortcut(e, this.shortcuts.navigateToMain)) {
       e.preventDefault();
-      console.log('Navigate to main triggered!'); // TEMPORARY DEBUG
       this.navigation.navigateToLandmark('mainMenu');
     } else if (this.matchesShortcut(e, this.shortcuts.navigateToSub)) {
       e.preventDefault();
-      console.log('Navigate to sub triggered!'); // TEMPORARY DEBUG
       this.navigation.navigateToLandmark('subMenu');
     } else if (this.matchesShortcut(e, this.shortcuts.navigateToTable)) {
       e.preventDefault();
-      console.log('Navigate to table triggered!'); // TEMPORARY DEBUG
       this.navigation.navigateToLandmark('contentArea');
     }
   });
@@ -2138,6 +2100,521 @@ class NavigationManager {
       shortcut: landmark.shortcut,
       available: this.isVisible(landmark.element)
     }));
+  }
+}
+
+// =============================================================================
+// LANGUAGE PAIRS MANAGEMENT
+// =============================================================================
+
+class LanguagePairsManager {
+  constructor() {
+    this.observer = null;
+    this.enhancedGrids = new WeakSet();
+    this.activeLanguageInput = null;
+    this.lastInputValue = '';
+    this.isTargetField = false;
+    this.preventSelection = false;
+  }
+
+  init() {
+    console.log('tradosClarity: Initializing Language Pairs Manager...');
+    this.fixInitialFocus();
+    this.enhanceExistingGrids();
+    this.setupMutationObserver();
+    this.setupGlobalHandlers();
+  }
+
+  fixInitialFocus() {
+    if (window.location.href.includes('/translation-memories/new')) {
+      console.log('tradosClarity: Translation memory creation page detected');
+      
+      const focusFirstField = () => {
+        const firstInput = document.querySelector('input[type="text"]:not([disabled]):not([readonly])');
+        if (firstInput && this.isVisible(firstInput)) {
+          firstInput.focus();
+          this.announce('Translation memory creation form. Focus set to name field.');
+          return true;
+        }
+        return false;
+      };
+      
+      setTimeout(focusFirstField, 500);
+      setTimeout(focusFirstField, 1000);
+    }
+  }
+
+  setupGlobalHandlers() {
+    const self = this;
+    
+    // Click handler for empty cells
+    document.addEventListener('click', (e) => {
+      const emptyCell = e.target.closest('.x-grid-empty-cell');
+      if (emptyCell && this.isInLanguagePairsGrid(emptyCell)) {
+        this.handleEmptyCellClick(emptyCell, e);
+      }
+    }, true);
+
+    // Keyboard handlers
+    document.addEventListener('keydown', (e) => {
+      const gridCell = e.target.closest('.x-grid-cell');
+      if (gridCell && this.isInLanguagePairsGrid(gridCell)) {
+        this.handleGridKeydown(e, gridCell);
+      }
+    }, true);
+
+    // Monitor dropdown appearance and keep input focused
+    document.addEventListener('DOMNodeInserted', function(e) {
+      if (self.activeLanguageInput && e.target.nodeType === 1) {
+        // Check if a dropdown appeared
+        if (e.target.classList?.contains('x-boundlist') || 
+            e.target.querySelector?.('.x-boundlist')) {
+          
+          console.log('tradosClarity: Dropdown appeared, maintaining input focus');
+          
+          // Keep focus on input
+          setTimeout(() => {
+            if (self.activeLanguageInput && document.activeElement !== self.activeLanguageInput) {
+              self.activeLanguageInput.focus();
+              // For target field, ensure no selection
+              if (self.isTargetField) {
+                const len = self.activeLanguageInput.value.length;
+                self.activeLanguageInput.setSelectionRange(len, len);
+              }
+            }
+          }, 0);
+        }
+      }
+    }, true);
+
+    // Global selection prevention for target field
+    document.addEventListener('selectstart', function(e) {
+      if (self.preventSelection && e.target === self.activeLanguageInput) {
+        console.log('tradosClarity: Preventing text selection in target field');
+        e.preventDefault();
+        return false;
+      }
+    }, true);
+  }
+
+  handleEmptyCellClick(cell, event) {
+    console.log('tradosClarity: Language cell clicked');
+    const fieldType = this.determineFieldType(cell);
+    this.isTargetField = (fieldType === 'target');
+    
+    const message = fieldType === 'source' 
+      ? 'Opening source language input. Type language code or name.'
+      : 'Opening target language input. Type language code or name.';
+    this.announce(message);
+    
+    // Click to activate edit mode
+    const innerDiv = cell.querySelector('.x-grid-cell-inner');
+    if (innerDiv) {
+      innerDiv.click();
+      
+      // Watch for input to appear
+      setTimeout(() => {
+        this.findAndEnhanceLanguageInput(cell, fieldType);
+      }, 100);
+    }
+  }
+
+  findAndEnhanceLanguageInput(cell, fieldType) {
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const checkInterval = setInterval(() => {
+      attempts++;
+      
+      // Find inputs near this cell
+      const inputs = document.querySelectorAll('input[type="text"]:not([data-trados-language-enhanced])');
+      
+      inputs.forEach(input => {
+        if (this.isVisible(input)) {
+          const inputRect = input.getBoundingClientRect();
+          const cellRect = cell.getBoundingClientRect();
+          
+          // Check if input is positioned near the cell
+          const isNearCell = Math.abs(inputRect.top - cellRect.top) < 50 &&
+                            Math.abs(inputRect.left - cellRect.left) < 200;
+          
+          if (isNearCell) {
+            console.log('tradosClarity: Found language input, enhancing...');
+            this.enhanceLanguageInput(input, fieldType);
+            clearInterval(checkInterval);
+          }
+        }
+      });
+      
+      if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+      }
+    }, 50);
+  }
+
+  enhanceLanguageInput(input, fieldType) {
+    const self = this;
+    
+    // Mark as enhanced
+    input.setAttribute('data-trados-language-enhanced', 'true');
+    input.setAttribute('data-field-type', fieldType);
+    
+    // Set as active
+    this.activeLanguageInput = input;
+    
+    // Add ARIA label
+    const label = fieldType === 'source'
+      ? 'Source language input. Type language code or name. Use arrow keys to navigate suggestions.'
+      : 'Target language input. Type language code or name. Use arrow keys to navigate suggestions.';
+    input.setAttribute('aria-label', label);
+    
+    // Override the blur handler to maintain focus
+    let isSelectingFromDropdown = false;
+    
+    input.addEventListener('blur', function(e) {
+      if (self.activeLanguageInput === input) {
+        // Check if focus is going to a dropdown item
+        setTimeout(() => {
+          const activeEl = document.activeElement;
+          
+          if (activeEl && (activeEl.classList.contains('x-boundlist-item') || 
+                          activeEl.getAttribute('role') === 'option')) {
+            console.log('tradosClarity: Focus on dropdown item, allowing selection');
+            isSelectingFromDropdown = true;
+            return;
+          }
+          
+          // If we're still typing and not selecting from dropdown, refocus
+          if (!isSelectingFromDropdown && self.activeLanguageInput === input) {
+            console.log('tradosClarity: Refocusing language input');
+            input.focus();
+            if (self.isTargetField) {
+              const pos = input.value.length;
+              input.setSelectionRange(pos, pos);
+            }
+          }
+        }, 10);
+      }
+    }, true);
+    
+    // For target field, aggressively prevent selection
+    if (this.isTargetField) {
+      console.log('tradosClarity: Configuring target field special handling');
+      
+      // Enable selection prevention
+      this.preventSelection = true;
+      
+      // Override selection-related properties
+      input.style.userSelect = 'text';  // Allow typing but we'll control selection
+      
+      // Prevent mouseup selection
+      input.addEventListener('mouseup', function(e) {
+        if (self.activeLanguageInput === input) {
+          e.preventDefault();
+          const len = input.value.length;
+          input.setSelectionRange(len, len);
+        }
+      }, true);
+      
+      // Monitor and fix selection continuously
+      const selectionGuard = setInterval(() => {
+        if (self.activeLanguageInput === input && self.isTargetField) {
+          // Check if text is selected
+          if (input.selectionStart !== input.selectionEnd) {
+            console.log('tradosClarity: Fixing unwanted selection in target field');
+            const len = input.value.length;
+            input.setSelectionRange(len, len);
+          }
+        } else {
+          clearInterval(selectionGuard);
+        }
+      }, 50);
+      
+      // Store interval for cleanup
+      input._selectionGuard = selectionGuard;
+      
+      // Handle input with immediate cursor positioning
+      input.addEventListener('input', function(e) {
+        self.lastInputValue = input.value;
+        console.log('tradosClarity: Target language input value:', input.value);
+        
+        // Immediately move cursor to end
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+        
+        // Keep this input active
+        self.activeLanguageInput = input;
+        
+        // Double-check no selection
+        requestAnimationFrame(() => {
+          if (self.activeLanguageInput === input) {
+            const len2 = input.value.length;
+            input.setSelectionRange(len2, len2);
+          }
+        });
+      }, true);
+      
+      // Intercept all selection attempts
+      const preventSelectionHandler = function(e) {
+        if (self.activeLanguageInput === input && self.isTargetField) {
+          const len = input.value.length;
+          input.setSelectionRange(len, len);
+        }
+      };
+      
+      input.addEventListener('select', preventSelectionHandler, true);
+      input.addEventListener('selectstart', preventSelectionHandler, true);
+      
+    } else {
+      // Source field - original handling (working well)
+      input.addEventListener('input', function(e) {
+        self.lastInputValue = input.value;
+        console.log('tradosClarity: Source language input value:', input.value);
+        
+        // Keep this input active
+        self.activeLanguageInput = input;
+        
+        // Ensure focus stays on input
+        if (document.activeElement !== input) {
+          input.focus();
+        }
+      });
+    }
+    
+    // Handle keyboard navigation (common for both)
+    input.addEventListener('keydown', function(e) {
+      // For target field, ensure no selection before typing
+      if (self.isTargetField && e.key.length === 1) {
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      }
+      
+      switch (e.key) {
+        case 'ArrowDown':
+        case 'ArrowUp':
+          // Allow dropdown navigation but keep input as active
+          console.log('tradosClarity: Arrow key pressed, allowing dropdown navigation');
+          isSelectingFromDropdown = true;
+          break;
+          
+        case 'Enter':
+          // Selection made
+          console.log('tradosClarity: Enter pressed, selection complete');
+          self.activeLanguageInput = null;
+          self.preventSelection = false;
+          
+          // Clean up selection guard
+          if (input._selectionGuard) {
+            clearInterval(input._selectionGuard);
+          }
+          
+          const value = input.value;
+          if (value) {
+            self.announce(`${fieldType} language selected: ${value}`);
+          }
+          break;
+          
+        case 'Tab':
+          // Moving to next field
+          console.log('tradosClarity: Tab pressed, moving to next field');
+          self.activeLanguageInput = null;
+          self.preventSelection = false;
+          
+          // Clean up selection guard
+          if (input._selectionGuard) {
+            clearInterval(input._selectionGuard);
+          }
+          break;
+          
+        case 'Escape':
+          // Cancel
+          console.log('tradosClarity: Escape pressed, cancelling');
+          self.activeLanguageInput = null;
+          self.preventSelection = false;
+          
+          // Clean up selection guard
+          if (input._selectionGuard) {
+            clearInterval(input._selectionGuard);
+          }
+          break;
+          
+        default:
+          // Regular typing
+          if (e.key.length === 1) {
+            isSelectingFromDropdown = false;
+          }
+          break;
+      }
+    });
+    
+    // Watch for value changes from dropdown selection
+    const valueWatcher = setInterval(() => {
+      if (input.value !== self.lastInputValue) {
+        self.lastInputValue = input.value;
+        
+        // Check if it looks like a complete selection
+        if (input.value.includes(' - ') || /\b[a-z]{2}[-_][A-Z]{2}\b/.test(input.value)) {
+          console.log('tradosClarity: Language selected from dropdown:', input.value);
+          clearInterval(valueWatcher);
+        }
+      }
+      
+      // Stop watching after 30 seconds
+      if (!document.body.contains(input) || !self.activeLanguageInput) {
+        clearInterval(valueWatcher);
+      }
+    }, 100);
+    
+    // Focus and announce
+    input.focus();
+    if (this.isTargetField) {
+      // Ensure no initial selection
+      const len = input.value.length;
+      input.setSelectionRange(len, len);
+    }
+    this.announce(label);
+    
+    // Clean up when input is removed
+    const observer = new MutationObserver((mutations) => {
+      if (!document.body.contains(input)) {
+        console.log('tradosClarity: Language input removed from DOM');
+        if (this.activeLanguageInput === input) {
+          this.activeLanguageInput = null;
+          this.preventSelection = false;
+        }
+        if (input._selectionGuard) {
+          clearInterval(input._selectionGuard);
+        }
+        clearInterval(valueWatcher);
+        observer.disconnect();
+      }
+    });
+    
+    observer.observe(input.parentElement || document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  handleGridKeydown(event, gridCell) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      const emptyCell = gridCell.querySelector('.x-grid-empty-cell') ? gridCell : gridCell.closest('.x-grid-empty-cell');
+      if (emptyCell) {
+        this.handleEmptyCellClick(emptyCell, event);
+      }
+    }
+  }
+
+  determineFieldType(cell) {
+    // Check by position in row
+    const row = cell.closest('tr');
+    if (row) {
+      const cells = Array.from(row.querySelectorAll('td'));
+      const index = cells.indexOf(cell);
+      return index === 0 ? 'source' : 'target';
+    }
+    
+    // Fallback to classes
+    if (cell.classList.contains('x-grid-cell-first')) return 'source';
+    if (cell.classList.contains('x-grid-cell-targets')) return 'target';
+    
+    return 'unknown';
+  }
+
+  enhanceEmptyCell(cell) {
+    if (cell.hasAttribute('data-trados-enhanced')) return;
+    
+    cell.setAttribute('data-trados-enhanced', 'true');
+    
+    const fieldType = this.determineFieldType(cell);
+    const label = fieldType === 'source'
+      ? 'Source language, empty. Press Enter to select.'
+      : 'Target language, empty. Press Enter to select.';
+    
+    cell.setAttribute('aria-label', label);
+    cell.setAttribute('tabindex', '0');
+    
+    cell.addEventListener('focus', () => {
+      cell.style.outline = '2px solid #0066cc';
+      cell.style.outlineOffset = '-2px';
+    });
+    
+    cell.addEventListener('blur', () => {
+      cell.style.outline = '';
+    });
+  }
+
+  enhanceLanguageGrid(grid) {
+    if (this.enhancedGrids.has(grid)) return;
+    
+    console.log('tradosClarity: Enhancing language pairs grid');
+    this.enhancedGrids.add(grid);
+    
+    const emptyCells = grid.querySelectorAll('.x-grid-empty-cell');
+    emptyCells.forEach(cell => this.enhanceEmptyCell(cell));
+    
+    if (!grid.getAttribute('aria-label')) {
+      grid.setAttribute('aria-label', 'Language pairs grid. Navigate with arrows, press Enter to select languages.');
+    }
+  }
+
+  isLanguagePairsGrid(element) {
+    if (!element) return false;
+    
+    return element.classList.contains('language-pairs-grid') ||
+           element.id.includes('tmlanguagepairsgridpanel') ||
+           element.closest('.language-pairs-grid') !== null;
+  }
+
+  isInLanguagePairsGrid(element) {
+    return element.closest('.language-pairs-grid, [id*="tmlanguagepairsgridpanel"]') !== null;
+  }
+
+  enhanceExistingGrids() {
+    const grids = document.querySelectorAll('.language-pairs-grid, [id*="tmlanguagepairsgridpanel"]');
+    grids.forEach(grid => this.enhanceLanguageGrid(grid));
+  }
+
+  setupMutationObserver() {
+    this.observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            if (this.isLanguagePairsGrid(node)) {
+              this.enhanceLanguageGrid(node);
+            }
+          }
+        });
+      });
+    });
+    
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  isVisible(element) {
+    if (!element) return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  announce(message) {
+    const announcer = document.createElement('div');
+    announcer.setAttribute('aria-live', 'assertive');
+    announcer.setAttribute('aria-atomic', 'true');
+    announcer.className = 'trados-live-region';
+    announcer.style.cssText = 'position: absolute !important; left: -10000px !important;';
+    announcer.textContent = message;
+    document.body.appendChild(announcer);
+    
+    setTimeout(() => {
+      if (announcer.parentNode) {
+        announcer.parentNode.removeChild(announcer);
+      }
+    }, 3000);
   }
 }
 
